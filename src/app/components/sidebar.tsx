@@ -34,8 +34,8 @@ export function Sidebar({ alertCount = 0 }: SidebarProps) {
 
   const menuItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/plantas', icon: Sun, label: 'Mis Plantas' },
     { path: '/financiero', icon: TrendingUp, label: 'Análisis Financiero' },
+    { path: '/plantas', icon: Sun, label: 'Mis Plantas' },
     { path: '/costos', icon: Wallet, label: 'Costos Operativos' },
     { path: '/facturas', icon: Receipt, label: 'Facturas' },
     { path: '/alertas', icon: Bell, label: 'Alertas', badge: alertCount },
