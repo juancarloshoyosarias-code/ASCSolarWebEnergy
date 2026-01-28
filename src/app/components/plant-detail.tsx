@@ -330,21 +330,35 @@ export function PlantDetail() {
     }
   };
 
-  // Datos para gráfico de flujo energético - desde historial real
-  // Toma el año más reciente con datos y genera los 12 meses
-  const latestYearData = plantHistory.length > 0
-    ? plantHistory.reduce((latest, current) => current.year > latest.year ? current : latest, plantHistory[0])
-    : null;
+  // Datos para gráfico de flujo energético - HISTORIAL COMPLETO
+  // Incluye TODOS los meses de TODOS los años disponibles
+  const energyFlowData: { month: string; exportacion: number; importacion: number; autoconsumo: number; consumo: number; year: number; monthNum: number }[] = [];
 
-  const energyFlowData = latestYearData
-    ? latestYearData.months.map((m: any) => ({
-      month: m.month,
-      exportacion: Math.round(m.exportacion || 0),
-      importacion: Math.round(m.importacion || 0),
-      autoconsumo: Math.round(m.autoconsumo || 0),
-      consumo: Math.round((m.autoconsumo || 0) + (m.importacion || 0)) // consumo = autoconsumo + importación
-    }))
-    : Array.from({ length: 12 }, (_, i) => ({ month: i + 1, exportacion: 0, importacion: 0, autoconsumo: 0, consumo: 0 }));
+  plantHistory.forEach((yearData: any) => {
+    yearData.months?.forEach((m: any) => {
+      const autoconsumo = Math.round(m.autoconsumo || 0);
+      const exportacion = Math.round(m.exportacion || 0);
+      const importacion = Math.round(m.importacion || 0);
+      // Solo agregar meses que tengan datos
+      if (autoconsumo > 0 || exportacion > 0 || importacion > 0) {
+        energyFlowData.push({
+          month: `${['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][m.month - 1]} ${String(yearData.year).slice(-2)}`,
+          exportacion,
+          importacion,
+          autoconsumo,
+          consumo: autoconsumo + importacion,
+          year: yearData.year,
+          monthNum: m.month
+        });
+      }
+    });
+  });
+
+  // Ordenar cronológicamente
+  energyFlowData.sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.monthNum - b.monthNum;
+  });
 
   // ============================================
   // CÁLCULOS HSP Y PR REALES (desde plantHistory)
@@ -803,11 +817,11 @@ export function PlantDetail() {
           {/* Nueva Gráfica: Flujo Energético (Exportación, Importación, Autoconsumo) */}
           <div className="bg-card rounded-2xl border border-border p-6">
             <h3 className="font-bold text-foreground mb-2">Flujo Energético - {plant.name}</h3>
-            <p className="text-xs text-muted-foreground mb-4">Comparativa de exportación, importación y autoconsumo {latestYearData ? `(${latestYearData.year})` : ''}</p>
+            <p className="text-xs text-muted-foreground mb-4">Comparativa de exportación, importación y autoconsumo (Histórico Completo)</p>
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={energyFlowData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} tickFormatter={(v) => `Mes ${v}`} />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={60} />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`} />
                 <Tooltip formatter={(val: number) => val.toLocaleString() + ' kWh'} />
                 <Legend />
