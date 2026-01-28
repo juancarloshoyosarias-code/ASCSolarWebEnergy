@@ -87,12 +87,15 @@ export const getPlantsSummary = async (req, res) => {
                 FROM fs.plant_daily_metrics
                 GROUP BY plant_code
             ),
-            -- Estado en tiempo real
+            -- Estado en tiempo real (incluye generación del día actual)
             realtime AS (
                 SELECT DISTINCT ON (plant_code)
                     plant_code,
                     ts_utc as last_seen,
-                    power_kw as current_power
+                    power_kw as current_power,
+                    day_power_kwh as gen_hoy_realtime,
+                    month_power_kwh as gen_mes_realtime,
+                    total_power_kwh as gen_total_realtime
                 FROM raw.fs_realtime_plants
                 ORDER BY plant_code, ts_utc DESC
             )
@@ -105,35 +108,35 @@ export const getPlantsSummary = async (req, res) => {
 
                 -- Fecha inicio y días operando
                 gt.start_date,
-                (pr.d_hoy - gt.start_date::date) as days_in_operation,
-                pr.d_hoy as fecha_datos,
+                (CURRENT_DATE - gt.start_date::date) as days_in_operation,
+                CURRENT_DATE as fecha_datos,
 
-                -- DÍA
-                ROUND(gd.gen_kwh_hoy::numeric, 1) as gen_today,
+                -- DÍA (TIEMPO REAL desde fs_realtime_plants)
+                ROUND(COALESCE(rt.gen_hoy_realtime, gd.gen_kwh_hoy, 0)::numeric, 1) as gen_today,
                 ROUND((s.kwp * s.hps_obj * s.pr_obj)::numeric, 1) as obj_today,
                 ROUND(gd.consumo_kwh_hoy::numeric, 1) as consumo_today,
                 ROUND(gd.autoconsumo_kwh_hoy::numeric, 1) as autoconsumo_today,
                 ROUND(gd.export_kwh_hoy::numeric, 1) as export_today,
                 ROUND(gd.import_kwh_hoy::numeric, 1) as import_today,
 
-                -- MES (MTD)
-                ROUND(gm.gen_kwh_mes::numeric, 1) as gen_month,
-                ROUND((s.kwp * s.hps_obj * s.pr_obj * (pr.d_hoy - pr.d_ini_mes + 1))::numeric, 1) as obj_month,
+                -- MES (TIEMPO REAL + histórico del mes)
+                ROUND(COALESCE(rt.gen_mes_realtime, gm.gen_kwh_mes, 0)::numeric, 1) as gen_month,
+                ROUND((s.kwp * s.hps_obj * s.pr_obj * EXTRACT(DAY FROM CURRENT_DATE))::numeric, 1) as obj_month,
                 ROUND(gm.consumo_kwh_mes::numeric, 1) as consumo_month,
                 ROUND(gm.autoconsumo_kwh_mes::numeric, 1) as autoconsumo_month,
                 ROUND(gm.export_kwh_mes::numeric, 1) as export_month,
                 ROUND(gm.import_kwh_mes::numeric, 1) as import_month,
 
-                -- AÑO (YTD)
-                ROUND(gy.gen_kwh_ytd::numeric, 1) as gen_year,
+                -- AÑO (histórico + mes actual en tiempo real)
+                ROUND((gy.gen_kwh_ytd + COALESCE(rt.gen_hoy_realtime, 0) - COALESCE(gd.gen_kwh_hoy, 0))::numeric, 1) as gen_year,
                 ROUND((s.kwp * s.hps_obj * s.pr_obj * 365)::numeric, 1) as obj_year,
                 ROUND(gy.consumo_kwh_ytd::numeric, 1) as consumo_year,
                 ROUND(gy.autoconsumo_kwh_ytd::numeric, 1) as autoconsumo_year,
                 ROUND(gy.export_kwh_ytd::numeric, 1) as export_year,
                 ROUND(gy.import_kwh_ytd::numeric, 1) as import_year,
 
-                -- TOTAL HISTÓRICO
-                ROUND(gt.gen_total::numeric, 1) as gen_total,
+                -- TOTAL HISTÓRICO (desde realtime que ya incluye todo)
+                ROUND(COALESCE(rt.gen_total_realtime, gt.gen_total, 0)::numeric, 1) as gen_total,
                 ROUND(gt.autoconsumo_total::numeric, 1) as autoconsumo_total,
                 ROUND(gt.export_total::numeric, 1) as export_total,
 

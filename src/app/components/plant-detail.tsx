@@ -309,7 +309,13 @@ export function PlantDetail() {
   const plantInvestment = financials.investment || plant?.investment || 400000000;
   const plantSavingsTotal = financials.savingsTotal || plant?.savingsTotal || 0;
   const plantPaybackYears = plant?.paybackYears || 5;
-  const beneficioTributarioTotal = taxPlanning.reduce((sum, year) => sum + year.ahorroImpuestosTotal, 0);
+
+  // Beneficio tributario calculado sobre la inversión de ESTA planta
+  // Renta 50% x 35% + Depreciación 20% x 5 años x 35%
+  const beneficioRenta = plantInvestment * 0.5 * 0.35; // 50% deducible x 35% tasa
+  const beneficioDepreciacion = plantInvestment * 0.35; // 100% depreciable x 35% tasa (5 años)
+  const beneficioTributarioTotal = beneficioRenta + beneficioDepreciacion;
+
   const totalRecuperado = plantSavingsTotal + beneficioTributarioTotal;
   const porcentajeRecuperado = plantInvestment > 0 ? (totalRecuperado / plantInvestment) * 100 : 0;
   const saldoRestante = plantInvestment - totalRecuperado;
