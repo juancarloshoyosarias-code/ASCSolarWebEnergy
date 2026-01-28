@@ -1,86 +1,149 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
     Upload, Eye, Download, Filter, FileText, X, Check,
     Zap, DollarSign, TrendingUp, TrendingDown, Calendar, Building2,
-    ChevronDown, ChevronUp, Receipt, CreditCard, Wallet
+    ChevronDown, ChevronUp, Receipt, CreditCard, Wallet, Loader2
 } from 'lucide-react';
-import { mockFacturas, mockPlants } from '@/data/mockData';
+
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 // Formato de dinero
 const formatCOP = (val: number) => `$${val.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
 const formatNumber = (val: number) => val.toLocaleString('es-CO');
 const formatTarifa = (val: number) => `$${val.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-// Interfaz para factura completa
-interface FacturaCelsia {
+// Interfaz para factura
+interface Factura {
     id: number;
-    plantId: string;
-    plant: string;
+    planta: string;
     codigo?: string;
     periodo: string;
+    anio: number;
+    mes: string;
+    mesNum: number;
     fechaInicial?: string;
     fechaFinal?: string;
-    consumoMes?: number;
-    consumoImportadoKwh?: number;
-    consumoImportadoPrecio?: number;
-    consumoImportadoTotal?: number;
-    creditoEnergiaKwh?: number;
-    creditoEnergiaPrecio?: number;
-    creditoEnergiaTotal?: number;
-    valoracionHorariaKwh?: number;
-    valoracionHorariaPrecio?: number;
-    valoracionHorariaTotal?: number;
-    totalExcedentesKwh?: number;
-    tarifaAplicada?: number;
-    generacion?: number;
-    comercializacion?: number;
-    transmision?: number;
-    restricciones?: number;
-    distribucion?: number;
-    perdidas?: number;
-    totalCelsia?: number;
-    otrasEntidades?: number;
-    alumbrado?: number;
-    aseo?: number;
-    otros?: number;
-    saldoAnterior?: number;
-    saldoAcumulado?: number;
-    totalPagar?: number;
+    consumoMes: number;
+    consumoImportadoKwh: number;
+    consumoImportadoPrecio: number;
+    consumoImportadoTotal: number;
+    creditoEnergiaKwh: number;
+    creditoEnergiaPrecio: number;
+    creditoEnergiaTotal: number;
+    valoracionHorariaKwh: number;
+    valoracionHorariaPrecio: number;
+    valoracionHorariaTotal: number;
+    totalExcedentesKwh: number;
+    tarifaAplicada: number;
+    generacionTarifa: number;
+    comercializacionTarifa: number;
+    transmisionTarifa: number;
+    restriccionesTarifa: number;
+    distribucionTarifa: number;
+    perdidasTarifa: number;
+    totalCelsia: number;
+    alumbrado: number;
+    aseo: number;
+    otros: number;
+    totalPagar: number;
+    saldoAnterior: number;
+    saldoAcumulado: number;
     sinSolar: number;
     conSolar: number;
     ahorro: number;
 }
 
+interface Totals {
+    consumo: number;
+    importacion: number;
+    credito: number;
+    totalCelsia: number;
+    totalPagar: number;
+    ahorro: number;
+    sinSolar: number;
+    pctAhorro: number;
+}
+
 export function Facturas() {
+    const [facturas, setFacturas] = useState<Factura[]>([]);
+    const [totals, setTotals] = useState<Totals>({ consumo: 0, importacion: 0, credito: 0, totalCelsia: 0, totalPagar: 0, ahorro: 0, sinSolar: 0, pctAhorro: 0 });
+    const [saldoAcumuladoTotal, setSaldoAcumuladoTotal] = useState(0);
+    const [plantas, setPlantas] = useState<string[]>([]);
+    const [anios, setAnios] = useState<number[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
     const [filterPlant, setFilterPlant] = useState('all');
     const [filterYear, setFilterYear] = useState('2025');
     const [filterMonth, setFilterMonth] = useState('all');
     const [showUploadModal, setShowUploadModal] = useState(false);
-    const [selectedFactura, setSelectedFactura] = useState<FacturaCelsia | null>(null);
+    const [selectedFactura, setSelectedFactura] = useState<Factura | null>(null);
     const [uploadSuccess, setUploadSuccess] = useState(false);
     const [expandedRows, setExpandedRows] = useState<number[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const facturas = mockFacturas as FacturaCelsia[];
+    // Fetch facturas from API
+    useEffect(() => {
+        const fetchFacturas = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const params = new URLSearchParams();
+                if (filterYear !== 'all') params.append('year', filterYear);
+                if (filterPlant !== 'all') params.append('plant', filterPlant);
 
-    const filteredFacturas = facturas.filter(f => {
-        const matchPlant = filterPlant === 'all' || f.plantId === filterPlant;
-        const matchYear = f.periodo.includes(filterYear);
-        const matchMonth = filterMonth === 'all' || f.periodo.toLowerCase().includes(filterMonth.toLowerCase());
-        return matchPlant && matchYear && matchMonth;
-    });
+                const response = await fetch(`${API_URL}/api/plants/facturas?${params}`);
+                if (!response.ok) throw new Error('Error al cargar facturas');
 
-    // Totales
-    const totals = filteredFacturas.reduce((acc, f) => ({
-        consumo: acc.consumo + (f.consumoMes || 0),
-        importacion: acc.importacion + (f.consumoImportadoKwh || 0),
-        exportacion: acc.exportacion + (f.creditoEnergiaKwh || 0),
-        sinSolar: acc.sinSolar + f.sinSolar,
-        conSolar: acc.conSolar + f.conSolar,
-        ahorro: acc.ahorro + f.ahorro,
-        totalPagar: acc.totalPagar + (f.totalPagar || 0),
-        saldoAcumulado: acc.saldoAcumulado + (f.saldoAcumulado || 0),
-    }), { consumo: 0, importacion: 0, exportacion: 0, sinSolar: 0, conSolar: 0, ahorro: 0, totalPagar: 0, saldoAcumulado: 0 });
+                const data = await response.json();
+
+                // Filtrar por mes en frontend si es necesario
+                let filteredFacturas = data.facturas || [];
+                if (filterMonth !== 'all') {
+                    const mesMap: Record<string, string[]> = {
+                        'ene': ['Enero'], 'feb': ['Febrero'], 'mar': ['Marzo'],
+                        'abr': ['Abril'], 'may': ['Mayo'], 'jun': ['Junio'],
+                        'jul': ['Julio'], 'ago': ['Agosto'], 'sep': ['Septiembre'],
+                        'oct': ['Octubre'], 'nov': ['Noviembre'], 'dic': ['Diciembre']
+                    };
+                    const meses = mesMap[filterMonth] || [];
+                    filteredFacturas = filteredFacturas.filter((f: Factura) =>
+                        meses.some(m => f.mes.toLowerCase().includes(m.toLowerCase()))
+                    );
+                }
+
+                setFacturas(filteredFacturas);
+
+                // Recalcular totales si se filtró por mes
+                if (filterMonth !== 'all') {
+                    const newTotals = filteredFacturas.reduce((acc: Totals, f: Factura) => ({
+                        consumo: acc.consumo + f.consumoMes,
+                        importacion: acc.importacion + f.consumoImportadoKwh,
+                        credito: acc.credito + f.creditoEnergiaKwh,
+                        totalCelsia: acc.totalCelsia + f.totalCelsia,
+                        totalPagar: acc.totalPagar + f.totalPagar,
+                        ahorro: acc.ahorro + f.ahorro,
+                        sinSolar: acc.sinSolar + f.sinSolar,
+                        pctAhorro: 0
+                    }), { consumo: 0, importacion: 0, credito: 0, totalCelsia: 0, totalPagar: 0, ahorro: 0, sinSolar: 0, pctAhorro: 0 });
+                    newTotals.pctAhorro = newTotals.sinSolar > 0 ? Math.round(newTotals.ahorro / newTotals.sinSolar * 100) : 0;
+                    setTotals(newTotals);
+                } else {
+                    setTotals(data.totals || { consumo: 0, importacion: 0, credito: 0, totalCelsia: 0, totalPagar: 0, ahorro: 0, sinSolar: 0, pctAhorro: 0 });
+                }
+
+                setSaldoAcumuladoTotal(data.saldoAcumuladoTotal || 0);
+                setPlantas(data.plantas || []);
+                setAnios(data.anios || []);
+            } catch (err: any) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchFacturas();
+    }, [filterYear, filterPlant, filterMonth]);
 
     const handleUploadClick = () => {
         fileInputRef.current?.click();
@@ -88,7 +151,6 @@ export function Facturas() {
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            // Simular upload y procesamiento OCR
             setTimeout(() => {
                 setUploadSuccess(true);
                 setTimeout(() => {
@@ -105,6 +167,23 @@ export function Facturas() {
         );
     };
 
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <span className="ml-2">Cargando facturas...</span>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="p-6 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+                <p className="text-red-600 dark:text-red-400">Error: {error}</p>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6 pb-20">
             {/* Header */}
@@ -112,7 +191,7 @@ export function Facturas() {
                 <div>
                     <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                         <Receipt className="w-6 h-6 text-primary" />
-                        Facturas Celsia
+                        Facturas Comercializador Energía
                     </h1>
                     <p className="text-muted-foreground">Gestión completa de facturas de energía - Autogeneradores</p>
                 </div>
@@ -134,7 +213,7 @@ export function Facturas() {
                         </div>
                         <span className="text-sm text-muted-foreground">Facturas del Período</span>
                     </div>
-                    <p className="text-2xl font-bold">{filteredFacturas.length}</p>
+                    <p className="text-2xl font-bold">{facturas.length}</p>
                 </div>
                 <div className="bg-card border border-border rounded-2xl p-5">
                     <div className="flex items-center gap-3 mb-2">
@@ -161,7 +240,7 @@ export function Facturas() {
                         </div>
                         <span className="text-sm text-white/80">Saldo Acumulado Total</span>
                     </div>
-                    <p className="text-2xl font-bold">{formatCOP(totals.saldoAcumulado)}</p>
+                    <p className="text-2xl font-bold">{formatCOP(saldoAcumuladoTotal)}</p>
                 </div>
             </div>
 
@@ -177,8 +256,8 @@ export function Facturas() {
                     className="px-4 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                     <option value="all">Todas las plantas</option>
-                    {mockPlants.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
+                    {plantas.map(p => (
+                        <option key={p} value={p}>{p}</option>
                     ))}
                 </select>
                 <select
@@ -186,9 +265,9 @@ export function Facturas() {
                     onChange={(e) => setFilterYear(e.target.value)}
                     className="px-4 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                    <option value="2026">2026</option>
-                    <option value="2025">2025</option>
-                    <option value="2024">2024</option>
+                    {anios.map(a => (
+                        <option key={a} value={a}>{a}</option>
+                    ))}
                 </select>
                 <select
                     value={filterMonth}
@@ -216,7 +295,7 @@ export function Facturas() {
                 <div className="p-4 border-b border-border bg-muted/20 flex justify-between items-center">
                     <h3 className="font-bold text-foreground flex items-center gap-2">
                         <FileText className="w-5 h-5 text-muted-foreground" />
-                        Historial de Facturas Celsia
+                        Historial de Facturas Comercializador
                     </h3>
                     <span className="text-xs text-muted-foreground">Click en una fila para ver detalles</span>
                 </div>
@@ -238,7 +317,7 @@ export function Facturas() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredFacturas.map((factura) => (
+                            {facturas.map((factura) => (
                                 <>
                                     <tr
                                         key={factura.id}
@@ -251,14 +330,14 @@ export function Facturas() {
                                                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
                                             }
                                         </td>
-                                        <td className="p-4 font-medium">{factura.plant}</td>
+                                        <td className="p-4 font-medium">{factura.planta}</td>
                                         <td className="p-4 text-muted-foreground font-mono text-xs">{factura.codigo || '-'}</td>
                                         <td className="p-4">{factura.periodo}</td>
                                         <td className="p-4 text-right">{formatNumber(factura.consumoMes || 0)} kWh</td>
                                         <td className="p-4 text-right text-amber-600">{formatNumber(factura.consumoImportadoKwh || 0)} kWh</td>
                                         <td className="p-4 text-right text-emerald-600">{formatNumber(factura.creditoEnergiaKwh || 0)} kWh</td>
-                                        <td className="p-4 text-right font-medium">{formatCOP(factura.totalCelsia || factura.conSolar)}</td>
-                                        <td className="p-4 text-right font-bold text-primary">{formatCOP(factura.totalPagar || factura.conSolar)}</td>
+                                        <td className="p-4 text-right font-medium">{formatCOP(factura.totalCelsia || 0)}</td>
+                                        <td className="p-4 text-right font-bold text-primary">{formatCOP(factura.totalPagar || 0)}</td>
                                         <td className="p-4 text-right font-bold text-emerald-600">{formatCOP(factura.ahorro)}</td>
                                         <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
                                             <button
@@ -270,7 +349,7 @@ export function Facturas() {
                                             </button>
                                         </td>
                                     </tr>
-                                    {/* Fila expandible con detalles rápidos */}
+                                    {/* Fila expandible */}
                                     {expandedRows.includes(factura.id) && (
                                         <tr key={`exp-${factura.id}`} className="bg-muted/10">
                                             <td colSpan={11} className="p-4">
@@ -289,7 +368,7 @@ export function Facturas() {
                                                     </div>
                                                     <div className="bg-white dark:bg-card p-3 rounded-lg border border-border">
                                                         <p className="text-muted-foreground mb-1">Otras Entidades</p>
-                                                        <p className="font-bold">{formatCOP(factura.otrasEntidades || 0)}</p>
+                                                        <p className="font-bold">{formatCOP((factura.alumbrado || 0) + (factura.aseo || 0) + (factura.otros || 0))}</p>
                                                     </div>
                                                     <div className="bg-white dark:bg-card p-3 rounded-lg border border-border">
                                                         <p className="text-muted-foreground mb-1">Saldo Anterior</p>
@@ -312,14 +391,14 @@ export function Facturas() {
                                 <td className="p-4"></td>
                                 <td className="p-4">TOTAL</td>
                                 <td className="p-4"></td>
-                                <td className="p-4">{filterMonth === 'all' ? 'Período' : filterMonth} {filterYear}</td>
+                                <td className="p-4">Período {filterYear}</td>
                                 <td className="p-4 text-right">{formatNumber(totals.consumo)} kWh</td>
                                 <td className="p-4 text-right">{formatNumber(totals.importacion)} kWh</td>
-                                <td className="p-4 text-right">{formatNumber(totals.exportacion)} kWh</td>
-                                <td className="p-4 text-right">{formatCOP(totals.conSolar)}</td>
+                                <td className="p-4 text-right">{formatNumber(totals.credito)} kWh</td>
+                                <td className="p-4 text-right">{formatCOP(totals.totalCelsia)}</td>
                                 <td className="p-4 text-right text-primary">{formatCOP(totals.totalPagar)}</td>
                                 <td className="p-4 text-right text-emerald-600">
-                                    {formatCOP(totals.ahorro)} ({totals.sinSolar > 0 ? ((totals.ahorro / totals.sinSolar) * 100).toFixed(0) : 0}%)
+                                    {formatCOP(totals.ahorro)} ({totals.pctAhorro}%)
                                 </td>
                                 <td className="p-4"></td>
                             </tr>
@@ -347,7 +426,7 @@ export function Facturas() {
                                         className="border-2 border-dashed border-border rounded-xl p-12 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all"
                                     >
                                         <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                                        <p className="text-sm font-medium mb-1">Arrastra tu factura Celsia o haz clic para subir</p>
+                                        <p className="text-sm font-medium mb-1">Arrastra tu factura o haz clic para subir</p>
                                         <p className="text-xs text-muted-foreground">PDF, máximo 10MB</p>
                                     </div>
                                     <input
@@ -362,7 +441,7 @@ export function Facturas() {
                                         <p className="text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2">
                                             <Zap className="w-4 h-4 shrink-0 mt-0.5" />
                                             <span>
-                                                <strong>Procesamiento automático:</strong> El sistema detectará automáticamente el tipo de factura (Modelo Nuevo o Viejo) y extraerá todos los datos usando OCR inteligente.
+                                                <strong>Procesamiento automático:</strong> El sistema detectará automáticamente el tipo de factura y extraerá todos los datos usando OCR inteligente.
                                             </span>
                                         </p>
                                     </div>
@@ -390,8 +469,8 @@ export function Facturas() {
                     <div className="bg-card w-full max-w-4xl rounded-2xl border border-border shadow-xl overflow-hidden my-8">
                         <div className="flex justify-between items-center p-6 border-b border-border bg-gradient-to-r from-primary/10 to-transparent">
                             <div>
-                                <h2 className="text-xl font-bold">Detalle de Factura Celsia</h2>
-                                <p className="text-sm text-muted-foreground">{selectedFactura.plant} - {selectedFactura.periodo}</p>
+                                <h2 className="text-xl font-bold">Detalle de Factura</h2>
+                                <p className="text-sm text-muted-foreground">{selectedFactura.planta} - {selectedFactura.periodo}</p>
                             </div>
                             <button onClick={() => setSelectedFactura(null)} className="p-2 hover:bg-muted rounded-lg">
                                 <X className="w-5 h-5" />
@@ -407,11 +486,11 @@ export function Facturas() {
                                 </div>
                                 <div className="p-4 bg-muted/30 rounded-xl">
                                     <p className="text-xs text-muted-foreground mb-1">Fecha Inicial</p>
-                                    <p className="font-bold">{selectedFactura.fechaInicial}</p>
+                                    <p className="font-bold">{selectedFactura.fechaInicial || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-muted/30 rounded-xl">
                                     <p className="text-xs text-muted-foreground mb-1">Fecha Final</p>
-                                    <p className="font-bold">{selectedFactura.fechaFinal}</p>
+                                    <p className="font-bold">{selectedFactura.fechaFinal || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-muted/30 rounded-xl">
                                     <p className="text-xs text-muted-foreground mb-1">Tarifa Aplicada</p>
@@ -470,27 +549,27 @@ export function Facturas() {
                                 <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
                                     <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
                                         <p className="text-[10px] text-muted-foreground uppercase">Generación</p>
-                                        <p className="font-bold text-sm">{formatTarifa(selectedFactura.generacion || 0)}</p>
+                                        <p className="font-bold text-sm">{formatTarifa(selectedFactura.generacionTarifa || 0)}</p>
                                     </div>
                                     <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
                                         <p className="text-[10px] text-muted-foreground uppercase">Comercializ.</p>
-                                        <p className="font-bold text-sm">{formatTarifa(selectedFactura.comercializacion || 0)}</p>
+                                        <p className="font-bold text-sm">{formatTarifa(selectedFactura.comercializacionTarifa || 0)}</p>
                                     </div>
                                     <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
                                         <p className="text-[10px] text-muted-foreground uppercase">Transmisión</p>
-                                        <p className="font-bold text-sm">{formatTarifa(selectedFactura.transmision || 0)}</p>
+                                        <p className="font-bold text-sm">{formatTarifa(selectedFactura.transmisionTarifa || 0)}</p>
                                     </div>
                                     <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
                                         <p className="text-[10px] text-muted-foreground uppercase">Restricciones</p>
-                                        <p className="font-bold text-sm">{formatTarifa(selectedFactura.restricciones || 0)}</p>
+                                        <p className="font-bold text-sm">{formatTarifa(selectedFactura.restriccionesTarifa || 0)}</p>
                                     </div>
                                     <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
                                         <p className="text-[10px] text-muted-foreground uppercase">Distribución</p>
-                                        <p className="font-bold text-sm">{formatTarifa(selectedFactura.distribucion || 0)}</p>
+                                        <p className="font-bold text-sm">{formatTarifa(selectedFactura.distribucionTarifa || 0)}</p>
                                     </div>
                                     <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
                                         <p className="text-[10px] text-muted-foreground uppercase">Pérdidas</p>
-                                        <p className="font-bold text-sm">{formatTarifa(selectedFactura.perdidas || 0)}</p>
+                                        <p className="font-bold text-sm">{formatTarifa(selectedFactura.perdidasTarifa || 0)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -509,12 +588,12 @@ export function Facturas() {
                                             <span className="font-medium">{formatCOP(selectedFactura.aseo || 0)}</span>
                                         </div>
                                         <div className="flex justify-between p-2 bg-muted/30 rounded">
-                                            <span>Otros (Seguridad, etc.)</span>
+                                            <span>Otros</span>
                                             <span className="font-medium">{formatCOP(selectedFactura.otros || 0)}</span>
                                         </div>
                                         <div className="flex justify-between p-3 bg-muted/50 rounded font-bold">
                                             <span>Total Otras Entidades</span>
-                                            <span>{formatCOP(selectedFactura.otrasEntidades || 0)}</span>
+                                            <span>{formatCOP((selectedFactura.alumbrado || 0) + (selectedFactura.aseo || 0) + (selectedFactura.otros || 0))}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -528,7 +607,7 @@ export function Facturas() {
                                         </div>
                                         <div className="flex justify-between p-2 bg-muted/30 rounded">
                                             <span>Otras Entidades</span>
-                                            <span className="font-medium">{formatCOP(selectedFactura.otrasEntidades || 0)}</span>
+                                            <span className="font-medium">{formatCOP((selectedFactura.alumbrado || 0) + (selectedFactura.aseo || 0) + (selectedFactura.otros || 0))}</span>
                                         </div>
                                         <div className="flex justify-between p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-emerald-700 dark:text-emerald-400">
                                             <span>Saldo Anterior</span>
@@ -561,7 +640,7 @@ export function Facturas() {
                                         <p className="text-sm text-emerald-700 dark:text-emerald-400 mb-1">Ahorro del Mes</p>
                                         <p className="text-2xl font-bold text-emerald-600">{formatCOP(selectedFactura.ahorro)}</p>
                                         <p className="text-xs text-emerald-600 mt-1">
-                                            {((selectedFactura.ahorro / selectedFactura.sinSolar) * 100).toFixed(0)}% de reducción
+                                            {selectedFactura.sinSolar > 0 ? ((selectedFactura.ahorro / selectedFactura.sinSolar) * 100).toFixed(0) : 0}% de reducción
                                         </p>
                                     </div>
                                 </div>

@@ -294,6 +294,22 @@ export const getPlantDetails = async (req, res) => {
         `, [plant.plant_name]);
         const invData = invRes.rows[0] || {};
 
+        // Saldo acumulado de Celsia para esta planta (último registro)
+        const saldoCelsiaRes = await dbQuery(`
+            SELECT "Saldo Acumulado (COP)" as saldo_celsia
+            FROM fs."FacCelsia"
+            WHERE "Planta" = $1
+            ORDER BY "Año" DESC,
+                CASE "Mes"
+                    WHEN 'Enero' THEN 1 WHEN 'Febrero' THEN 2 WHEN 'Marzo' THEN 3
+                    WHEN 'Abril' THEN 4 WHEN 'Mayo' THEN 5 WHEN 'Junio' THEN 6
+                    WHEN 'Julio' THEN 7 WHEN 'Agosto' THEN 8 WHEN 'Septiembre' THEN 9
+                    WHEN 'Octubre' THEN 10 WHEN 'Noviembre' THEN 11 WHEN 'Diciembre' THEN 12
+                END DESC
+            LIMIT 1
+        `, [plant.plant_name]);
+        const saldoCelsia = parseFloat(saldoCelsiaRes.rows[0]?.saldo_celsia || 0);
+
         // Calcular ahorro acumulado (autoconsumo * tarifa + exportación * tarifa_export)
         const TARIFA_AUTOCONSUMO = 750; // $/kWh
         const TARIFA_EXPORTACION = 400; // $/kWh
@@ -396,7 +412,8 @@ export const getPlantDetails = async (req, res) => {
                 vida_util: parseInt(invData.vida_util_acelerada || 5),
                 savingsTotal: savingsTotal,
                 ahorroAutoconsumo: ahorroAutoconsumo,
-                ingresoExportacion: ingresoExportacion
+                ingresoExportacion: ingresoExportacion,
+                saldoCelsia: saldoCelsia
             }
         });
 
@@ -989,5 +1006,187 @@ export const getEnergyDistribution = async (req, res) => {
     } catch (err) {
         console.error('Error fetching energy distribution:', err);
         res.status(500).json({ error: 'Error obteniendo distribución de energía' });
+    }
+};
+
+// Obtener facturas del comercializador (Celsia)
+// Fuente: fs.FacCelsia
+exports.getFacturas = async (req, res) => {
+    try {
+        const { year, plant } = req.query;
+
+        let whereClause = 'WHERE 1=1';
+        const params = [];
+
+        if (year && year !== 'all') {
+            params.push(parseInt(year));
+            whereClause += ` AND "Año" = $${params.length}`;
+        }
+
+        if (plant && plant !== 'all') {
+            params.push(plant);
+            whereClause += ` AND "Planta" = $${params.length}`;
+        }
+
+        const query = `
+            SELECT
+                "Planta" as planta,
+                "Codigo" as codigo,
+                "Año" as anio,
+                "Mes" as mes,
+                CASE "Mes"
+                    WHEN 'Enero' THEN 1 WHEN 'Febrero' THEN 2 WHEN 'Marzo' THEN 3
+                    WHEN 'Abril' THEN 4 WHEN 'Mayo' THEN 5 WHEN 'Junio' THEN 6
+                    WHEN 'Julio' THEN 7 WHEN 'Agosto' THEN 8 WHEN 'Septiembre' THEN 9
+                    WHEN 'Octubre' THEN 10 WHEN 'Noviembre' THEN 11 WHEN 'Diciembre' THEN 12
+                END as mes_num,
+                "Fecha inicial" as fecha_inicial,
+                "Fecha final" as fecha_final,
+                COALESCE("Consumo del mes (kWh)", 0) as consumo_mes,
+                COALESCE("Consumo importado (kWh)", 0) as consumo_importado_kwh,
+                COALESCE("Consumo importado ($/kWh)", 0) as consumo_importado_precio,
+                COALESCE("Consumo importado Subtotal COP", 0) as consumo_importado_total,
+                COALESCE("Creditos de energia (kWh)", 0) as credito_energia_kwh,
+                COALESCE("Creditos de energia ($/kWh)", 0) as credito_energia_precio,
+                COALESCE("Creditos de energia Subtotal COP", 0) as credito_energia_total,
+                COALESCE("Valoracion horaria (kWh)", 0) as valoracion_horaria_kwh,
+                COALESCE("Valoracion horaria ($/kWh)", 0) as valoracion_horaria_precio,
+                COALESCE("Valoracion horaria Subtotal COP", 0) as valoracion_horaria_total,
+                COALESCE("Total Excedentes (kWh)", 0) as total_excedentes_kwh,
+                COALESCE("Generacion ($/kWh)", 0) as generacion_tarifa,
+                COALESCE("Comercializacion ($/kWh)", 0) as comercializacion_tarifa,
+                COALESCE("Transmision ($/kWh)", 0) as transmision_tarifa,
+                COALESCE("Restricciones ($/kWh)", 0) as restricciones_tarifa,
+                COALESCE("Distribucion ($/kWh)", 0) as distribucion_tarifa,
+                COALESCE("Perdidas ($/kWh)", 0) as perdidas_tarifa,
+                (
+                    COALESCE("Generacion ($/kWh)", 0) +
+                    COALESCE("Comercializacion ($/kWh)", 0) +
+                    COALESCE("Transmision ($/kWh)", 0) +
+                    COALESCE("Restricciones ($/kWh)", 0) +
+                    COALESCE("Distribucion ($/kWh)", 0) +
+                    COALESCE("Perdidas ($/kWh)", 0)
+                ) as tarifa_aplicada,
+                COALESCE("Subtotal Celsia ($)", 0) as total_celsia,
+                COALESCE("Alumbrado ($)", 0) as alumbrado,
+                COALESCE("Aseo ($)", 0) as aseo,
+                COALESCE("Otros ($)", 0) as otros,
+                COALESCE("TOTAL A PAGAR ($)", 0) as total_pagar,
+                COALESCE("Saldo Anterior ($)", 0) as saldo_anterior,
+                COALESCE("Saldo Acumulado (COP)", 0) as saldo_acumulado
+            FROM fs."FacCelsia"
+            ${whereClause}
+            ORDER BY "Año" DESC,
+                CASE "Mes"
+                    WHEN 'Enero' THEN 1 WHEN 'Febrero' THEN 2 WHEN 'Marzo' THEN 3
+                    WHEN 'Abril' THEN 4 WHEN 'Mayo' THEN 5 WHEN 'Junio' THEN 6
+                    WHEN 'Julio' THEN 7 WHEN 'Agosto' THEN 8 WHEN 'Septiembre' THEN 9
+                    WHEN 'Octubre' THEN 10 WHEN 'Noviembre' THEN 11 WHEN 'Diciembre' THEN 12
+                END DESC
+        `;
+
+        const result = await dbQuery(query, params);
+
+        // Calcular ahorro por factura (estimado sin solar vs con solar)
+        const facturas = result.rows.map((row, idx) => {
+            const tarifaCompleta = parseFloat(row.tarifa_aplicada) || 750;
+            const consumoTotal = parseFloat(row.consumo_mes) || 0;
+            const sinSolar = Math.round(consumoTotal * tarifaCompleta);
+            const conSolar = parseFloat(row.total_pagar) || 0;
+            const ahorro = sinSolar - conSolar;
+
+            return {
+                id: idx + 1,
+                planta: row.planta,
+                codigo: row.codigo,
+                periodo: `${row.mes} ${row.anio}`,
+                anio: row.anio,
+                mes: row.mes,
+                mesNum: row.mes_num,
+                fechaInicial: row.fecha_inicial,
+                fechaFinal: row.fecha_final,
+                consumoMes: parseFloat(row.consumo_mes),
+                consumoImportadoKwh: parseFloat(row.consumo_importado_kwh),
+                consumoImportadoPrecio: parseFloat(row.consumo_importado_precio),
+                consumoImportadoTotal: parseFloat(row.consumo_importado_total),
+                creditoEnergiaKwh: parseFloat(row.credito_energia_kwh),
+                creditoEnergiaPrecio: parseFloat(row.credito_energia_precio),
+                creditoEnergiaTotal: parseFloat(row.credito_energia_total),
+                valoracionHorariaKwh: parseFloat(row.valoracion_horaria_kwh),
+                valoracionHorariaPrecio: parseFloat(row.valoracion_horaria_precio),
+                valoracionHorariaTotal: parseFloat(row.valoracion_horaria_total),
+                totalExcedentesKwh: parseFloat(row.total_excedentes_kwh),
+                tarifaAplicada: tarifaCompleta,
+                generacionTarifa: parseFloat(row.generacion_tarifa),
+                comercializacionTarifa: parseFloat(row.comercializacion_tarifa),
+                transmisionTarifa: parseFloat(row.transmision_tarifa),
+                restriccionesTarifa: parseFloat(row.restricciones_tarifa),
+                distribucionTarifa: parseFloat(row.distribucion_tarifa),
+                perdidasTarifa: parseFloat(row.perdidas_tarifa),
+                totalCelsia: parseFloat(row.total_celsia),
+                alumbrado: parseFloat(row.alumbrado),
+                aseo: parseFloat(row.aseo),
+                otros: parseFloat(row.otros),
+                totalPagar: parseFloat(row.total_pagar),
+                saldoAnterior: parseFloat(row.saldo_anterior),
+                saldoAcumulado: parseFloat(row.saldo_acumulado),
+                sinSolar,
+                conSolar: Math.round(conSolar),
+                ahorro
+            };
+        });
+
+        // Calcular totales
+        const totals = facturas.reduce((acc, f) => ({
+            consumo: acc.consumo + f.consumoMes,
+            importacion: acc.importacion + f.consumoImportadoKwh,
+            credito: acc.credito + f.creditoEnergiaKwh,
+            totalCelsia: acc.totalCelsia + f.totalCelsia,
+            totalPagar: acc.totalPagar + f.totalPagar,
+            ahorro: acc.ahorro + f.ahorro,
+            sinSolar: acc.sinSolar + f.sinSolar
+        }), { consumo: 0, importacion: 0, credito: 0, totalCelsia: 0, totalPagar: 0, ahorro: 0, sinSolar: 0 });
+
+        // Saldo acumulado actual (último de cada planta)
+        const saldoQuery = `
+            SELECT SUM(saldo) as saldo_total FROM (
+                SELECT DISTINCT ON ("Planta") "Saldo Acumulado (COP)" as saldo
+                FROM fs."FacCelsia"
+                ORDER BY "Planta", "Año" DESC,
+                    CASE "Mes"
+                        WHEN 'Enero' THEN 1 WHEN 'Febrero' THEN 2 WHEN 'Marzo' THEN 3
+                        WHEN 'Abril' THEN 4 WHEN 'Mayo' THEN 5 WHEN 'Junio' THEN 6
+                        WHEN 'Julio' THEN 7 WHEN 'Agosto' THEN 8 WHEN 'Septiembre' THEN 9
+                        WHEN 'Octubre' THEN 10 WHEN 'Noviembre' THEN 11 WHEN 'Diciembre' THEN 12
+                    END DESC
+            ) sub
+        `;
+        const saldoRes = await dbQuery(saldoQuery);
+        const saldoAcumuladoTotal = parseFloat(saldoRes.rows[0]?.saldo_total || 0);
+
+        // Plantas disponibles para filtro
+        const plantasQuery = `SELECT DISTINCT "Planta" as planta FROM fs."FacCelsia" ORDER BY "Planta"`;
+        const plantasRes = await dbQuery(plantasQuery);
+        const plantas = plantasRes.rows.map(r => r.planta);
+
+        // Años disponibles
+        const aniosQuery = `SELECT DISTINCT "Año" as anio FROM fs."FacCelsia" ORDER BY "Año" DESC`;
+        const aniosRes = await dbQuery(aniosQuery);
+        const anios = aniosRes.rows.map(r => r.anio);
+
+        res.json({
+            facturas,
+            totals: {
+                ...totals,
+                pctAhorro: totals.sinSolar > 0 ? Math.round(totals.ahorro / totals.sinSolar * 100) : 0
+            },
+            saldoAcumuladoTotal,
+            plantas,
+            anios
+        });
+
+    } catch (err) {
+        console.error('Error fetching facturas:', err);
+        res.status(500).json({ error: 'Error obteniendo facturas' });
     }
 };

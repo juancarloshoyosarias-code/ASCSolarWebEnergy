@@ -310,6 +310,9 @@ export function PlantDetail() {
   const plantSavingsTotal = financials.savingsTotal || plant?.savingsTotal || 0;
   const plantPaybackYears = plant?.paybackYears || 5;
 
+  // Saldo de Celsia (excedentes acumulados a favor) - DATO REAL de la facturación
+  const saldoCelsia = financials.saldoCelsia || 0;
+
   // Beneficio tributario calculado sobre la inversión de ESTA planta
   // Renta 50% x 35% + Depreciación 20% x 5 años x 35%
   const beneficioRenta = plantInvestment * 0.5 * 0.35; // 50% deducible x 35% tasa
@@ -318,7 +321,6 @@ export function PlantDetail() {
 
   const totalRecuperado = plantSavingsTotal + beneficioTributarioTotal;
   const porcentajeRecuperado = plantInvestment > 0 ? (totalRecuperado / plantInvestment) * 100 : 0;
-  const saldoRestante = plantInvestment - totalRecuperado;
 
   const formatCOP = (val: number | undefined | null) => `$${(val || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
   const formatCOPShort = (val: number | undefined | null) => {
@@ -866,25 +868,16 @@ export function PlantDetail() {
                 <p className="text-[10px] text-muted-foreground">Autoconsumo + Excedentes</p>
               </div>
 
-              {/* Tarjeta Azul Modificada: Saldo (Posición 3 - Premium Style) */}
-              <div className="bg-gradient-to-br from-primary to-primary/80 text-white rounded-xl border border-primary/20 p-4 flex flex-col justify-between shadow-lg">
+              {/* Tarjeta Saldo Celsia - Excedentes acumulados a favor */}
+              <div className={`rounded-xl border p-4 flex flex-col justify-between shadow-lg ${saldoCelsia >= 0 ? 'bg-gradient-to-br from-emerald-600 to-emerald-700 border-emerald-500/20 text-white' : 'bg-gradient-to-br from-amber-600 to-amber-700 border-amber-500/20 text-white'}`}>
                 <div>
-                  <p className="text-xs text-white/70 mb-1 font-semibold uppercase">Saldo Pendiente</p>
+                  <p className="text-xs text-white/70 mb-1 font-semibold uppercase">Saldo Celsia</p>
                   <p className="text-xl font-bold text-white mb-2">
-                    {formatCOPShort(saldoRestante > 0 ? saldoRestante : 0)}
+                    {formatCOPShort(Math.abs(saldoCelsia))}
                   </p>
-
-                  <div className="h-2 w-full bg-black/20 rounded-full overflow-hidden backdrop-blur-sm border border-white/10 mt-2">
-                    <div
-                      className="h-full bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-1000"
-                      style={{ width: `${Math.min(porcentajeRecuperado, 100)}%` }}
-                    ></div>
-                  </div>
-
-                  <div className="flex justify-between items-center mt-2 text-[10px] font-medium text-white/90">
-                    <span>{(100 - porcentajeRecuperado).toFixed(1)}% Restante</span>
-                    <span className="opacity-70">Recuperado: {porcentajeRecuperado.toFixed(1)}%</span>
-                  </div>
+                  <p className="text-[10px] text-white/80">
+                    {saldoCelsia >= 0 ? '✓ A favor (nos deben)' : '⚠ En contra (debemos)'}
+                  </p>
                 </div>
               </div>
 
