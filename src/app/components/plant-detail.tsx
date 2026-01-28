@@ -125,12 +125,19 @@ export function PlantDetail() {
             paybackYears: mockPlant?.paybackYears || 5,
           });
 
-          // Cargar historial detallado desde /api/plants/:id
+          // Cargar historial detallado y datos financieros desde /api/plants/:id
           try {
             const detailResponse = await fetch(`/api/plants/${id}`);
             const detailData = await detailResponse.json();
             if (detailData.history) {
               setPlantHistory(detailData.history);
+            }
+            // Actualizar plant con datos financieros del detalle
+            if (detailData.financials) {
+              setPlant((prev: any) => ({
+                ...prev,
+                financials: detailData.financials
+              }));
             }
           } catch (histErr) {
             console.error('Error loading plant history:', histErr);
