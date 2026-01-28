@@ -131,7 +131,10 @@ export function Dashboard() {
           <div>
             <p className="text-white/80 text-sm font-medium mb-1">Excedentes Facturados</p>
             <h3 className="text-3xl font-bold">{formatCurrency(investmentData?.ingresos?.cobros_celsia || 0)}</h3>
-            <p className="text-xs text-white/60 mt-2">Pagos por exportación de energía</p>
+            <div className="mt-2 text-xs text-white/70 space-y-1">
+              <p>Por cobrar: <span className="font-semibold text-white">{formatCurrency(investmentData?.ingresos?.saldo_por_cobrar || 0)}</span></p>
+              <p>Datos hasta: <span className="font-semibold text-white">{investmentData?.ingresos?.ultimo_mes_celsia} {investmentData?.ingresos?.ultimo_anio_celsia}</span></p>
+            </div>
           </div>
         </div>
 

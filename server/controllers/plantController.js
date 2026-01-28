@@ -426,16 +426,48 @@ export const getInvestmentSummary = async (req, res) => {
         const totalAutoconsumoKwh = parseFloat(autoRes.rows[0].total_autoconsumo_kwh || 0);
         const ahorroAutoconsumo = parseFloat(autoRes.rows[0].total_ahorro_autoconsumo || 0);
 
-        // 3. Excedentes Generados (Ingresos por Exportación - Fuente Celsia)
+        // 3. Excedentes Facturados = Pagos históricos + Saldo pendiente actual
+        // Detectamos pagos cuando el saldo cae >50% respecto al mes anterior
         const excedentesQuery = `
-            SELECT SUM(
-                ABS(COALESCE("Creditos de energia Subtotal COP", 0)) + 
-                ABS(COALESCE("Valoracion horaria Subtotal COP", 0))
-            ) as total_excedentes
-            FROM fs."FacCelsia"
+            WITH datos AS (
+                SELECT "Planta", "Año", "Mes", "Saldo Acumulado (COP)" as saldo,
+                       CASE "Mes" WHEN 'Enero' THEN 1 WHEN 'Febrero' THEN 2 WHEN 'Marzo' THEN 3 WHEN 'Abril' THEN 4 WHEN 'Mayo' THEN 5 WHEN 'Junio' THEN 6 WHEN 'Julio' THEN 7 WHEN 'Agosto' THEN 8 WHEN 'Septiembre' THEN 9 WHEN 'Octubre' THEN 10 WHEN 'Noviembre' THEN 11 WHEN 'Diciembre' THEN 12 END as mes_num
+                FROM fs."FacCelsia"
+                WHERE "Saldo Acumulado (COP)" IS NOT NULL
+            ),
+            con_lag AS (
+                SELECT *, LAG(saldo) OVER (PARTITION BY "Planta" ORDER BY "Año", mes_num) as saldo_anterior
+                FROM datos
+            ),
+            pagos AS (
+                SELECT SUM(saldo_anterior) as total_pagado
+                FROM con_lag
+                WHERE saldo < saldo_anterior * 0.5
+            ),
+            saldo_actual AS (
+                SELECT SUM(saldo) as total_pendiente FROM (
+                    SELECT DISTINCT ON ("Planta") saldo
+                    FROM datos
+                    ORDER BY "Planta", "Año" DESC, mes_num DESC
+                ) sub
+            ),
+            ultimo_mes AS (
+                SELECT "Año" as ultimo_anio, "Mes" as ultimo_mes
+                FROM datos
+                ORDER BY "Año" DESC, mes_num DESC
+                LIMIT 1
+            )
+            SELECT
+                COALESCE((SELECT total_pagado FROM pagos), 0) + COALESCE((SELECT total_pendiente FROM saldo_actual), 0) as total_excedentes,
+                COALESCE((SELECT total_pendiente FROM saldo_actual), 0) as saldo_pendiente,
+                (SELECT ultimo_mes FROM ultimo_mes) as ultimo_mes,
+                (SELECT ultimo_anio FROM ultimo_mes) as ultimo_anio
         `;
         const excRes = await dbQuery(excedentesQuery);
         const totalExcedentes = parseFloat(excRes.rows[0].total_excedentes || 0);
+        const saldoPendienteCelsia = parseFloat(excRes.rows[0].saldo_pendiente || 0);
+        const ultimoMesCelsia = excRes.rows[0].ultimo_mes || '';
+        const ultimoAnioCelsia = excRes.rows[0].ultimo_anio || '';
 
         // 4. Saldo y Pagos (Informativo)
         const pagosQuery = `SELECT SUM("TOTAL A PAGAR ($)") as total_pagado FROM fs."FacCelsia"`;
@@ -567,6 +599,9 @@ export const getInvestmentSummary = async (req, res) => {
             },
             ingresos: {
                 cobros_celsia: totalExcedentes,
+                saldo_por_cobrar: saldoPendienteCelsia,
+                ultimo_mes_celsia: ultimoMesCelsia,
+                ultimo_anio_celsia: ultimoAnioCelsia,
                 ahorro_autoconsumo: ahorroAutoconsumo,
                 total_operativo: ingresosOperativos,
                 kwh_autoconsumo: totalAutoconsumoKwh
