@@ -9,7 +9,7 @@ import {
   BarChart, Bar, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
-import { mockPlants, historicalGeneration, mockFinancialData, mockEnergyPrices, mockOperationalCosts } from '@/data/mockData';
+import { mockPlants, historicalGeneration, mockEnergyPrices, mockOperationalCosts } from '@/data/mockData';
 import { TaxPlanningYear } from '@/types';
 
 type TabType = 'resumen' | 'financiero' | 'equipos' | 'bitacora' | 'hsp' | 'precios';
@@ -227,10 +227,11 @@ export function PlantDetail() {
     );
   }
 
-  // Calcular días en funcionamiento (ejemplo: desde 15 de Marzo 2024)
-  const operationStartDate = new Date('2024-03-15');
+  // Calcular días en funcionamiento desde fecha real de inicio
+  const operationStartDate = plant.start_date ? new Date(plant.start_date) : new Date('2024-03-15');
   const today = new Date();
   const daysSinceStart = Math.floor((today.getTime() - operationStartDate.getTime()) / (1000 * 60 * 60 * 24));
+  const monthsSinceStart = Math.floor(daysSinceStart / 30);
 
   // Formatear fecha de inicio
   const formatDate = (date: Date) => {
@@ -305,8 +306,11 @@ export function PlantDetail() {
   const porcentajeRecuperado = plantInvestment > 0 ? (totalRecuperado / plantInvestment) * 100 : 0;
   const saldoRestante = plantInvestment - totalRecuperado;
 
-  const formatCOP = (val: number) => `$${val.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
-  const formatCOPShort = (val: number) => val >= 1000000 ? `$${(val / 1000000).toFixed(1)}M` : formatCOP(val);
+  const formatCOP = (val: number | undefined | null) => `$${(val || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
+  const formatCOPShort = (val: number | undefined | null) => {
+    const safeVal = val || 0;
+    return safeVal >= 1000000 ? `$${(safeVal / 1000000).toFixed(1)}M` : formatCOP(safeVal);
+  };
 
   const getEventIcon = (type: string) => {
     switch (type) {
@@ -399,6 +403,64 @@ export function PlantDetail() {
   const prReal = expectedGeneration > 0
     ? (generacionYTD / expectedGeneration) * 100
     : 0;
+
+  // ============================================
+  // DATOS FINANCIEROS REALES (desde plantHistory)
+  // ============================================
+  // Tarifas aproximadas (COP/kWh)
+  const TARIFA_AUTOCONSUMO = 850; // Lo que dejas de pagar por kWh autoconsumido
+  const TARIFA_EXPORTACION = 450; // Lo que te pagan por kWh exportado
+  const TARIFA_RED = 900; // Tarifa que pagarías sin solar
+
+  // Generar datos financieros por mes desde el historial
+  const realFinancialData: { month: string; selfConsumptionValue: number; exportedValue: number; year: number; monthNum: number }[] = [];
+  let accumulated = 0;
+
+  plantHistory.forEach((yearData: any) => {
+    yearData.months?.forEach((m: any) => {
+      const autoconsumoKwh = m.autoconsumo || 0;
+      const exportacionKwh = m.exportacion || 0;
+
+      const selfConsumptionValue = Math.round(autoconsumoKwh * TARIFA_AUTOCONSUMO);
+      const exportedValue = Math.round(exportacionKwh * TARIFA_EXPORTACION);
+      accumulated += selfConsumptionValue + exportedValue;
+
+      if (autoconsumoKwh > 0 || exportacionKwh > 0) {
+        realFinancialData.push({
+          month: `${shortMonthNames[m.month - 1]} ${String(yearData.year).slice(-2)}`,
+          selfConsumptionValue,
+          exportedValue,
+          year: yearData.year,
+          monthNum: m.month
+        });
+      }
+    });
+  });
+
+  // Ordenar por fecha
+  realFinancialData.sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.monthNum - b.monthNum;
+  });
+
+  // Totales financieros
+  const totalAhorroAutoconsumo = realFinancialData.reduce((sum, d) => sum + d.selfConsumptionValue, 0);
+  const totalIngresoExportacion = realFinancialData.reduce((sum, d) => sum + d.exportedValue, 0);
+  const totalAhorroNeto = totalAhorroAutoconsumo + totalIngresoExportacion;
+
+  // Agrupar por año para la tabla consolidada
+  const financialByYear: { [key: number]: { sinSolar: number; conSolar: number; ahorro: number } } = {};
+  realFinancialData.forEach(d => {
+    if (!financialByYear[d.year]) {
+      financialByYear[d.year] = { sinSolar: 0, conSolar: 0, ahorro: 0 };
+    }
+    const ahorro = d.selfConsumptionValue + d.exportedValue;
+    const conSolar = ahorro * 0.31; // Aproximación: lo que sí pagaste a la red
+    const sinSolar = ahorro + conSolar; // Lo que habrías pagado sin solar
+    financialByYear[d.year].ahorro += ahorro;
+    financialByYear[d.year].conSolar += conSolar;
+    financialByYear[d.year].sinSolar += sinSolar;
+  });
 
   return (
     <div className="space-y-6 pb-20">
@@ -1221,21 +1283,21 @@ export function PlantDetail() {
               <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Costo Acumulado (Sin Solar)</p>
                 <p className="text-2xl font-bold text-muted-foreground line-through decoration-rose-500/50">
-                  {formatCOP(mockFinancialData.reduce((acc, curr) => acc + (curr.selfConsumptionValue + curr.exportedValue) * 1.45, 0))}
+                  {formatCOP(totalAhorroNeto * 1.45)}
                 </p>
                 <p className="text-xs text-rose-500 mt-1 font-medium">Escenario Teórico (Sin Paneles)</p>
               </div>
               <div className="bg-card rounded-xl border border-border p-5 shadow-sm bg-primary/5 border-primary/20">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Costo Real Pagado</p>
                 <p className="text-2xl font-bold text-primary">
-                  {formatCOP(mockFinancialData.reduce((acc, curr) => acc + (curr.selfConsumptionValue + curr.exportedValue) * 0.45, 0))}
+                  {formatCOP(totalAhorroNeto * 0.31)}
                 </p>
                 <p className="text-xs text-primary mt-1 font-medium">Facturación Real con Sistema Solar</p>
               </div>
               <div className="bg-card rounded-xl border border-border p-5 shadow-sm bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Ahorro Neto Operativo</p>
                 <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {formatCOP(mockFinancialData.reduce((acc, curr) => acc + (curr.selfConsumptionValue + curr.exportedValue), 0))}
+                  {formatCOP(totalAhorroNeto)}
                 </p>
                 <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium">Dinero que dejó de salir</p>
               </div>
@@ -1249,10 +1311,10 @@ export function PlantDetail() {
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={mockFinancialData.map(d => ({
+                      data={realFinancialData.map(d => ({
                         month: d.month,
                         sinSolar: (d.selfConsumptionValue + d.exportedValue) * 1.45,
-                        conSolar: (d.selfConsumptionValue + d.exportedValue) * 0.45
+                        conSolar: (d.selfConsumptionValue + d.exportedValue) * 0.31
                       }))}
                       margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                     >
@@ -1293,10 +1355,10 @@ export function PlantDetail() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {mockFinancialData.map((row, i) => {
+                      {realFinancialData.map((row, i) => {
                         const ahorro = row.selfConsumptionValue + row.exportedValue;
-                        const conSolar = ahorro * 0.45;
-                        const sinSolar = conSolar + ahorro;
+                        const conSolar = ahorro * 0.31;
+                        const sinSolar = ahorro + conSolar;
                         return (
                           <tr key={i} className="hover:bg-muted/20">
                             <td className="p-3 font-medium">{row.month}</td>
@@ -1338,20 +1400,8 @@ export function PlantDetail() {
                 </div>
 
                 {/* Filas de Datos */}
-                {Object.entries(mockFinancialData.reduce((acc, curr) => {
-                  const year = '20' + curr.month.split(' ')[1];
-                  const ahorro = curr.selfConsumptionValue + curr.exportedValue;
-                  // Usamos la misma lógica de "escenario" que en la gráfica mensual
-                  const conSolar = ahorro * 0.45;
-                  const sinSolar = conSolar + ahorro;
-
-                  if (!acc[year]) acc[year] = { sinSolar: 0, conSolar: 0, ahorro: 0 };
-                  acc[year].ahorro += ahorro;
-                  acc[year].sinSolar += sinSolar;
-                  acc[year].conSolar += conSolar;
-                  return acc;
-                }, {} as Record<string, { sinSolar: number, conSolar: number, ahorro: number }>))
-                  .sort(([a], [b]) => a.localeCompare(b))
+                {Object.entries(financialByYear)
+                  .sort(([a], [b]) => Number(a) - Number(b))
                   .map(([year, data]) => (
                     <div key={year} className="grid grid-cols-4 items-center px-3 py-3 hover:bg-muted/30 rounded-lg transition-colors border-b border-border/30 last:border-0">
                       <div className="font-bold text-foreground">{year}</div>
@@ -1362,7 +1412,7 @@ export function PlantDetail() {
                         {formatCOPShort(data.conSolar)}
                       </div>
                       <div className="text-right text-sm font-bold text-emerald-600">
-                        {formatCOPShort(data.ahorro)}
+                        +{formatCOPShort(data.ahorro)}
                       </div>
                     </div>
                   ))}
@@ -1377,12 +1427,12 @@ export function PlantDetail() {
               <h3 className="font-bold text-foreground mb-6 relative z-10">Tiempo Total de Operación</h3>
               <div className="relative z-10">
                 <span className="text-6xl font-black text-primary tracking-tighter">
-                  {Math.floor((plant?.operationDays || 0) / 30)}
+                  {monthsSinceStart}
                 </span>
                 <span className="text-xl font-medium text-muted-foreground ml-2">Meses</span>
               </div>
               <div className="mt-4 text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-full relative z-10">
-                Desde {plant?.installationDate ? new Date(plant.installationDate).toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }) : 'Inicio'}
+                Desde {formatDate(operationStartDate)}
               </div>
               <p className="mt-4 text-xs text-muted-foreground max-w-[80%] relative z-10">
                 Operando de forma continua generando valor y sostenibilidad.
@@ -1559,7 +1609,7 @@ export function PlantDetail() {
               </p>
               <p className="text-sm text-muted-foreground mt-1">Gen Real / Gen Esperada</p>
               <p className="text-xs text-muted-foreground mt-2">
-                {(generacionYTD/1000).toFixed(0)}k kWh / {(expectedGeneration/1000).toFixed(0)}k kWh esperados
+                {(generacionYTD / 1000).toFixed(0)}k kWh / {(expectedGeneration / 1000).toFixed(0)}k kWh esperados
               </p>
             </div>
           </div>
