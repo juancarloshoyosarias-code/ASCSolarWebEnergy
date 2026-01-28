@@ -1011,7 +1011,7 @@ export const getEnergyDistribution = async (req, res) => {
 
 // Obtener facturas del comercializador (Celsia)
 // Fuente: fs.FacCelsia
-exports.getFacturas = async (req, res) => {
+export const getFacturas = async (req, res) => {
     try {
         const { year, plant } = req.query;
 
