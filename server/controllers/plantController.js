@@ -276,6 +276,30 @@ export const getPlantDetails = async (req, res) => {
         const statsRes = await dbQuery(statsQuery, [id]);
         const stats = statsRes.rows[0] || {};
 
+        // Datos de Inversión de la planta
+        const invRes = await dbQuery(`
+            SELECT
+                inversion_cop,
+                deduccion_50_cop,
+                ahorro_impuestos_cop,
+                inversion_neta_cop,
+                depreciacion_anual_cop,
+                ahorro_depreciacion_anual_cop,
+                vida_util_acelerada
+            FROM fs.inversiones_solar
+            WHERE planta = $1
+        `, [plant.plant_name]);
+        const invData = invRes.rows[0] || {};
+
+        // Calcular ahorro acumulado (autoconsumo * tarifa + exportación * tarifa_export)
+        const TARIFA_AUTOCONSUMO = 750; // $/kWh
+        const TARIFA_EXPORTACION = 400; // $/kWh
+        const autoconsumoTotal = parseFloat(stats.autoconsumo_total || 0);
+        const exportTotal = parseFloat(stats.export_total || 0);
+        const ahorroAutoconsumo = autoconsumoTotal * TARIFA_AUTOCONSUMO;
+        const ingresoExportacion = exportTotal * TARIFA_EXPORTACION;
+        const savingsTotal = ahorroAutoconsumo + ingresoExportacion;
+
         // Historial Mensual para Gráficas (desde fs.plant_daily_metrics)
         const historyRes = await dbQuery(`
             SELECT
@@ -358,7 +382,19 @@ export const getPlantDetails = async (req, res) => {
                 // Realtime
                 current_power: parseFloat(stats.current_power || 0)
             },
-            history: Object.values(historyMap).sort((a, b) => b.year - a.year)
+            history: Object.values(historyMap).sort((a, b) => b.year - a.year),
+            financials: {
+                investment: parseFloat(invData.inversion_cop || 0),
+                deduccion_renta: parseFloat(invData.deduccion_50_cop || 0),
+                ahorro_impuestos: parseFloat(invData.ahorro_impuestos_cop || 0),
+                inversion_neta: parseFloat(invData.inversion_neta_cop || 0),
+                depreciacion_anual: parseFloat(invData.depreciacion_anual_cop || 0),
+                ahorro_depreciacion_anual: parseFloat(invData.ahorro_depreciacion_anual_cop || 0),
+                vida_util: parseInt(invData.vida_util_acelerada || 5),
+                savingsTotal: savingsTotal,
+                ahorroAutoconsumo: ahorroAutoconsumo,
+                ingresoExportacion: ingresoExportacion
+            }
         });
 
     } catch (err) {

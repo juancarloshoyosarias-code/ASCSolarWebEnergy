@@ -297,9 +297,10 @@ export function PlantDetail() {
     return monthData;
   });
 
-  // Cálculos (con valores fallback para cuando plant aún no tiene datos completos)
-  const plantInvestment = plant?.investment || 400000000;
-  const plantSavingsTotal = plant?.savingsTotal || 0;
+  // Cálculos (usando datos financieros del API)
+  const financials = plant?.financials || {};
+  const plantInvestment = financials.investment || plant?.investment || 400000000;
+  const plantSavingsTotal = financials.savingsTotal || plant?.savingsTotal || 0;
   const plantPaybackYears = plant?.paybackYears || 5;
   const beneficioTributarioTotal = taxPlanning.reduce((sum, year) => sum + year.ahorroImpuestosTotal, 0);
   const totalRecuperado = plantSavingsTotal + beneficioTributarioTotal;
@@ -857,7 +858,7 @@ export function PlantDetail() {
                 <div>
                   <p className="text-xs text-white/70 mb-1 font-semibold uppercase">Saldo Pendiente</p>
                   <p className="text-xl font-bold text-white mb-2">
-                    {formatCOPShort((Math.abs(plantSavingsTotal - plantInvestment)) * -1)}
+                    {formatCOPShort(saldoRestante > 0 ? saldoRestante : 0)}
                   </p>
 
                   <div className="h-2 w-full bg-black/20 rounded-full overflow-hidden backdrop-blur-sm border border-white/10 mt-2">

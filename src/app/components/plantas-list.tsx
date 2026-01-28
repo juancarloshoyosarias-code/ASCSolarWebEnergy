@@ -301,15 +301,9 @@ export function PlantasList() {
           const targetMonth = parseFloat(plant.obj_month) || 0;
           const targetYearFull = parseFloat(plant.obj_year) || 0; // Objetivo anual completo (365 días)
 
-          // Calcular días transcurridos del año para objetivo YTD proporcional
-          const today = new Date();
-          const startOfYear = new Date(today.getFullYear(), 0, 1);
-          const daysElapsedYear = Math.floor((today.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-          const targetYearYTD = (targetYearFull / 365) * daysElapsedYear; // Objetivo proporcional
-
           const complianceDay = calcCompliance(genToday, targetDay);
           const complianceMonth = calcCompliance(genMonth, targetMonth);
-          const complianceYear = calcCompliance(genYear, targetYearYTD); // Comparar con objetivo YTD, no anual completo
+          const complianceYear = calcCompliance(genYear, targetYearFull); // Comparar con objetivo anual completo (365 días)
 
           // Fecha formateada
           const startDate = plant.start_date
