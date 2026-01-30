@@ -12,8 +12,8 @@ export const getPlantsSummary = async (req, res) => {
     try {
         const query = `
             WITH ultimo_dia AS (
-                -- Usar el último día con datos en el snapshot raw
-                SELECT MAX(ts_utc::date) as max_date FROM raw.fs_energy_daily_snapshot
+                -- Usar el último día con datos en zona horaria Colombia
+                SELECT MAX(DATE(ts_utc AT TIME ZONE 'America/Bogota')) as max_date FROM raw.fs_energy_daily_snapshot
             ),
             params AS (
                 SELECT
