@@ -32,18 +32,18 @@ export const getPlantsSummary = async (req, res) => {
                 FROM dim.fs_plants fp
             ),
             -- Datos diarios agregados desde raw.fs_energy_daily_snapshot
-            -- Tomamos el MÁXIMO de cada día (último snapshot del día)
+            -- Usamos MAX() por día en zona horaria Colombia (igual que reporte n8n)
             daily_data AS (
-                SELECT DISTINCT ON (plant_code, ts_utc::date)
+                SELECT
                     plant_code,
-                    ts_utc::date as fecha,
-                    day_gen_kwh,
-                    day_use_kwh,        -- Consumo total dispositivos
-                    day_self_use_kwh,   -- Autoconsumo (solar consumido directamente)
-                    day_export_kwh,     -- Exportación a red
-                    day_import_kwh      -- Importación de red
+                    DATE(ts_utc AT TIME ZONE 'America/Bogota') as fecha,
+                    MAX(day_gen_kwh) as day_gen_kwh,
+                    MAX(day_use_kwh) as day_use_kwh,        -- Consumo total dispositivos
+                    MAX(day_self_use_kwh) as day_self_use_kwh,   -- Autoconsumo (solar consumido directamente)
+                    MAX(day_export_kwh) as day_export_kwh,     -- Exportación a red
+                    MAX(day_import_kwh) as day_import_kwh      -- Importación de red
                 FROM raw.fs_energy_daily_snapshot
-                ORDER BY plant_code, ts_utc::date, ts_utc DESC
+                GROUP BY plant_code, DATE(ts_utc AT TIME ZONE 'America/Bogota')
             ),
             -- Métricas del DÍA
             gen_dia AS (
@@ -208,17 +208,17 @@ export const getPlantDetails = async (req, res) => {
         // Métricas usando raw.fs_energy_daily_snapshot (fuente real FusionSolar)
         const statsQuery = `
             WITH daily_data AS (
-                -- Último snapshot de cada día para esta planta
-                SELECT DISTINCT ON (ts_utc::date)
-                    ts_utc::date as fecha,
-                    day_gen_kwh,
-                    day_use_kwh,        -- Consumo total
-                    day_self_use_kwh,   -- Autoconsumo
-                    day_export_kwh,     -- Exportación
-                    day_import_kwh      -- Importación
+                -- MAX() por día en zona horaria Colombia (igual que reporte n8n)
+                SELECT
+                    DATE(ts_utc AT TIME ZONE 'America/Bogota') as fecha,
+                    MAX(day_gen_kwh) as day_gen_kwh,
+                    MAX(day_use_kwh) as day_use_kwh,        -- Consumo total
+                    MAX(day_self_use_kwh) as day_self_use_kwh,   -- Autoconsumo
+                    MAX(day_export_kwh) as day_export_kwh,     -- Exportación
+                    MAX(day_import_kwh) as day_import_kwh      -- Importación
                 FROM raw.fs_energy_daily_snapshot
                 WHERE plant_code = $1
-                ORDER BY ts_utc::date, ts_utc DESC
+                GROUP BY DATE(ts_utc AT TIME ZONE 'America/Bogota')
             ),
             ultimo_dia AS (
                 SELECT MAX(fecha) as max_date FROM daily_data
@@ -472,11 +472,12 @@ export const getInvestmentSummary = async (req, res) => {
         // Suma autoconsumo mensual de raw.fs_energy_daily_snapshot × tarifa mensual de FacCelsia
         const autoQuery = `
             WITH daily_data AS (
-                SELECT DISTINCT ON (plant_code, ts_utc::date)
-                    ts_utc::date as fecha,
-                    day_self_use_kwh
+                SELECT
+                    plant_code,
+                    DATE(ts_utc AT TIME ZONE 'America/Bogota') as fecha,
+                    MAX(day_self_use_kwh) as day_self_use_kwh
                 FROM raw.fs_energy_daily_snapshot
-                ORDER BY plant_code, ts_utc::date, ts_utc DESC
+                GROUP BY plant_code, DATE(ts_utc AT TIME ZONE 'America/Bogota')
             ),
             autoconsumo_mensual AS (
                 SELECT
@@ -599,7 +600,7 @@ export const getInvestmentSummary = async (req, res) => {
         const saldoNeto = inversionNetaConBeneficios - ingresosOperativos;
 
         // Meses de operación real
-        const mesesQuery = `SELECT count(DISTINCT to_char(ts_utc, 'YYYY-MM')) as meses FROM raw.fs_energy_daily_snapshot`;
+        const mesesQuery = `SELECT count(DISTINCT to_char(ts_utc AT TIME ZONE 'America/Bogota', 'YYYY-MM')) as meses FROM raw.fs_energy_daily_snapshot`;
         const mesesRes = await dbQuery(mesesQuery);
         const mesesOperacion = parseInt(mesesRes.rows[0].meses || 30);
 
@@ -668,11 +669,13 @@ export const getInvestmentSummary = async (req, res) => {
                 SELECT
                     COALESCE(SUM(day_self_use_kwh), 0) as kwh_anio
                 FROM (
-                    SELECT DISTINCT ON (plant_code, ts_utc::date)
-                        day_self_use_kwh
+                    SELECT
+                        plant_code,
+                        DATE(ts_utc AT TIME ZONE 'America/Bogota') as fecha,
+                        MAX(day_self_use_kwh) as day_self_use_kwh
                     FROM raw.fs_energy_daily_snapshot
-                    WHERE EXTRACT(YEAR FROM ts_utc) = $1
-                    ORDER BY plant_code, ts_utc::date, ts_utc DESC
+                    WHERE EXTRACT(YEAR FROM ts_utc AT TIME ZONE 'America/Bogota') = $1
+                    GROUP BY plant_code, DATE(ts_utc AT TIME ZONE 'America/Bogota')
                 ) daily
             )
             SELECT
@@ -805,13 +808,13 @@ export const getFinancialHistory = async (req, res) => {
         // 2. Consulta de autoconsumo desde raw.fs_energy_daily_snapshot (datos reales FusionSolar)
         const autoconsumoQuery = `
             WITH daily_data AS (
-                SELECT DISTINCT ON (e.plant_code, e.ts_utc::date)
+                SELECT
                     e.plant_code,
-                    e.ts_utc::date as fecha,
-                    e.day_self_use_kwh
+                    DATE(e.ts_utc AT TIME ZONE 'America/Bogota') as fecha,
+                    MAX(e.day_self_use_kwh) as day_self_use_kwh
                 FROM raw.fs_energy_daily_snapshot e
-                WHERE EXTRACT(YEAR FROM e.ts_utc) >= 2023
-                ORDER BY e.plant_code, e.ts_utc::date, e.ts_utc DESC
+                WHERE EXTRACT(YEAR FROM e.ts_utc AT TIME ZONE 'America/Bogota') >= 2023
+                GROUP BY e.plant_code, DATE(e.ts_utc AT TIME ZONE 'America/Bogota')
             )
             SELECT
                 fp.plant_name,
@@ -920,11 +923,12 @@ export const getGenerationHistory = async (req, res) => {
         // Histórico completo desde snapshot raw (datos reales de FusionSolar)
         const query = `
             WITH daily_data AS (
-                SELECT DISTINCT ON (plant_code, ts_utc::date)
-                    ts_utc::date as fecha,
-                    day_gen_kwh
+                SELECT
+                    plant_code,
+                    DATE(ts_utc AT TIME ZONE 'America/Bogota') as fecha,
+                    MAX(day_gen_kwh) as day_gen_kwh
                 FROM raw.fs_energy_daily_snapshot
-                ORDER BY plant_code, ts_utc::date, ts_utc DESC
+                GROUP BY plant_code, DATE(ts_utc AT TIME ZONE 'America/Bogota')
             )
             SELECT
                 EXTRACT(YEAR FROM fecha)::int as year,
@@ -1002,13 +1006,14 @@ export const getEnergyDistribution = async (req, res) => {
     try {
         const query = `
             WITH daily_data AS (
-                SELECT DISTINCT ON (plant_code, ts_utc::date)
-                    ts_utc::date as fecha,
-                    day_gen_kwh,
-                    day_self_use_kwh,
-                    day_export_kwh
+                SELECT
+                    plant_code,
+                    DATE(ts_utc AT TIME ZONE 'America/Bogota') as fecha,
+                    MAX(day_gen_kwh) as day_gen_kwh,
+                    MAX(day_self_use_kwh) as day_self_use_kwh,
+                    MAX(day_export_kwh) as day_export_kwh
                 FROM raw.fs_energy_daily_snapshot
-                ORDER BY plant_code, ts_utc::date, ts_utc DESC
+                GROUP BY plant_code, DATE(ts_utc AT TIME ZONE 'America/Bogota')
             )
             SELECT
                 EXTRACT(YEAR FROM fecha)::int as year,
