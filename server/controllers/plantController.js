@@ -7,12 +7,12 @@ function getMonthName(monthIndex) {
 }
 
 // Obtener resumen de todas las plantas para el Dashboard
-// Fuente: raw.fs_energy_daily_snapshot (datos reales de FusionSolar API)
+// Fuente HÍBRIDA: raw.fs_energy_daily_snapshot para DÍA, fs.plant_daily_metrics para HISTÓRICO
 export const getPlantsSummary = async (req, res) => {
     try {
         const query = `
             WITH ultimo_dia AS (
-                -- Usar el último día con datos en zona horaria Colombia
+                -- Usar el último día con datos en zona horaria Colombia (del snapshot raw)
                 SELECT MAX(DATE(ts_utc AT TIME ZONE 'America/Bogota')) as max_date FROM raw.fs_energy_daily_snapshot
             ),
             params AS (
@@ -31,21 +31,20 @@ export const getPlantsSummary = async (req, res) => {
                     COALESCE(fp.hps_reference, 4.0) AS hps_obj
                 FROM dim.fs_plants fp
             ),
-            -- Datos diarios agregados desde raw.fs_energy_daily_snapshot
-            -- Usamos MAX() por día en zona horaria Colombia (igual que reporte n8n)
-            daily_data AS (
+            -- Datos del DÍA desde raw.fs_energy_daily_snapshot (tiempo real)
+            daily_snapshot AS (
                 SELECT
                     plant_code,
                     DATE(ts_utc AT TIME ZONE 'America/Bogota') as fecha,
                     MAX(day_gen_kwh) as day_gen_kwh,
-                    MAX(day_use_kwh) as day_use_kwh,        -- Consumo total dispositivos
-                    MAX(day_self_use_kwh) as day_self_use_kwh,   -- Autoconsumo (solar consumido directamente)
-                    MAX(day_export_kwh) as day_export_kwh,     -- Exportación a red
-                    MAX(day_import_kwh) as day_import_kwh      -- Importación de red
+                    MAX(day_use_kwh) as day_use_kwh,
+                    MAX(day_self_use_kwh) as day_self_use_kwh,
+                    MAX(day_export_kwh) as day_export_kwh,
+                    MAX(day_import_kwh) as day_import_kwh
                 FROM raw.fs_energy_daily_snapshot
                 GROUP BY plant_code, DATE(ts_utc AT TIME ZONE 'America/Bogota')
             ),
-            -- Métricas del DÍA
+            -- Métricas del DÍA (desde snapshot raw - tiempo real)
             gen_dia AS (
                 SELECT
                     s.plant_code,
@@ -56,50 +55,50 @@ export const getPlantsSummary = async (req, res) => {
                     COALESCE(d.day_import_kwh, 0) AS import_kwh_hoy
                 FROM specs s
                 CROSS JOIN params pr
-                LEFT JOIN daily_data d
+                LEFT JOIN daily_snapshot d
                     ON d.plant_code = s.plant_code AND d.fecha = pr.d_hoy
             ),
-            -- Métricas del MES (MTD)
+            -- Métricas del MES (MTD) desde fs.plant_daily_metrics (histórico completo)
             gen_mtd AS (
                 SELECT
                     s.plant_code,
-                    COALESCE(SUM(d.day_gen_kwh), 0) AS gen_kwh_mes,
-                    COALESCE(SUM(d.day_use_kwh), 0) AS consumo_kwh_mes,
-                    COALESCE(SUM(d.day_self_use_kwh), 0) AS autoconsumo_kwh_mes,
-                    COALESCE(SUM(d.day_export_kwh), 0) AS export_kwh_mes,
-                    COALESCE(SUM(d.day_import_kwh), 0) AS import_kwh_mes
+                    COALESCE(SUM(m.fv_yield_kwh), 0) AS gen_kwh_mes,
+                    COALESCE(SUM(m.consumption_kwh), 0) AS consumo_kwh_mes,
+                    COALESCE(SUM(m.self_consumption_kwh), 0) AS autoconsumo_kwh_mes,
+                    COALESCE(SUM(m.exported_energy_kwh), 0) AS export_kwh_mes,
+                    COALESCE(SUM(m.imported_energy_kwh), 0) AS import_kwh_mes
                 FROM specs s
                 CROSS JOIN params pr
-                LEFT JOIN daily_data d
-                    ON d.plant_code = s.plant_code
-                    AND d.fecha >= pr.d_ini_mes AND d.fecha <= pr.d_hoy
+                LEFT JOIN fs.plant_daily_metrics m
+                    ON m.plant_code = s.plant_code
+                    AND m.date >= pr.d_ini_mes AND m.date <= pr.d_hoy
                 GROUP BY s.plant_code
             ),
-            -- Métricas del AÑO (YTD)
+            -- Métricas del AÑO (YTD) desde fs.plant_daily_metrics (histórico completo)
             gen_ytd AS (
                 SELECT
                     s.plant_code,
-                    COALESCE(SUM(d.day_gen_kwh), 0) AS gen_kwh_ytd,
-                    COALESCE(SUM(d.day_use_kwh), 0) AS consumo_kwh_ytd,
-                    COALESCE(SUM(d.day_self_use_kwh), 0) AS autoconsumo_kwh_ytd,
-                    COALESCE(SUM(d.day_export_kwh), 0) AS export_kwh_ytd,
-                    COALESCE(SUM(d.day_import_kwh), 0) AS import_kwh_ytd
+                    COALESCE(SUM(m.fv_yield_kwh), 0) AS gen_kwh_ytd,
+                    COALESCE(SUM(m.consumption_kwh), 0) AS consumo_kwh_ytd,
+                    COALESCE(SUM(m.self_consumption_kwh), 0) AS autoconsumo_kwh_ytd,
+                    COALESCE(SUM(m.exported_energy_kwh), 0) AS export_kwh_ytd,
+                    COALESCE(SUM(m.imported_energy_kwh), 0) AS import_kwh_ytd
                 FROM specs s
                 CROSS JOIN params pr
-                LEFT JOIN daily_data d
-                    ON d.plant_code = s.plant_code
-                    AND d.fecha >= pr.d_ini_year AND d.fecha <= pr.d_hoy
+                LEFT JOIN fs.plant_daily_metrics m
+                    ON m.plant_code = s.plant_code
+                    AND m.date >= pr.d_ini_year AND m.date <= pr.d_hoy
                 GROUP BY s.plant_code
             ),
-            -- Total histórico desde snapshot raw
+            -- Total histórico desde fs.plant_daily_metrics (histórico completo)
             gen_total AS (
                 SELECT
                     plant_code,
-                    MIN(fecha) as start_date,
-                    SUM(day_gen_kwh) as gen_total,
-                    SUM(day_self_use_kwh) as autoconsumo_total,
-                    SUM(day_export_kwh) as export_total
-                FROM daily_data
+                    MIN(date) as start_date,
+                    SUM(fv_yield_kwh) as gen_total,
+                    SUM(self_consumption_kwh) as autoconsumo_total,
+                    SUM(exported_energy_kwh) as export_total
+                FROM fs.plant_daily_metrics
                 GROUP BY plant_code
             ),
             -- Estado en tiempo real (incluye generación del día actual)
@@ -192,7 +191,7 @@ export const getPlantsSummary = async (req, res) => {
 };
 
 // Obtener detalle de una planta específica
-// Fuente: raw.fs_energy_daily_snapshot (datos reales de FusionSolar API)
+// Fuente HÍBRIDA: raw.fs_energy_daily_snapshot para DÍA, fs.plant_daily_metrics para HISTÓRICO
 export const getPlantDetails = async (req, res) => {
     const { id } = req.params;
 
@@ -205,23 +204,11 @@ export const getPlantDetails = async (req, res) => {
         }
         const plant = plantRes.rows[0];
 
-        // Métricas usando raw.fs_energy_daily_snapshot (fuente real FusionSolar)
+        // Métricas HÍBRIDAS: snapshot para día actual, plant_daily_metrics para histórico
         const statsQuery = `
-            WITH daily_data AS (
-                -- MAX() por día en zona horaria Colombia (igual que reporte n8n)
-                SELECT
-                    DATE(ts_utc AT TIME ZONE 'America/Bogota') as fecha,
-                    MAX(day_gen_kwh) as day_gen_kwh,
-                    MAX(day_use_kwh) as day_use_kwh,        -- Consumo total
-                    MAX(day_self_use_kwh) as day_self_use_kwh,   -- Autoconsumo
-                    MAX(day_export_kwh) as day_export_kwh,     -- Exportación
-                    MAX(day_import_kwh) as day_import_kwh      -- Importación
-                FROM raw.fs_energy_daily_snapshot
-                WHERE plant_code = $1
-                GROUP BY DATE(ts_utc AT TIME ZONE 'America/Bogota')
-            ),
-            ultimo_dia AS (
-                SELECT MAX(fecha) as max_date FROM daily_data
+            WITH ultimo_dia AS (
+                SELECT MAX(DATE(ts_utc AT TIME ZONE 'America/Bogota')) as max_date
+                FROM raw.fs_energy_daily_snapshot WHERE plant_code = $1
             ),
             params AS (
                 SELECT
@@ -230,37 +217,49 @@ export const getPlantDetails = async (req, res) => {
                     date_trunc('year', ud.max_date)::date AS d_ini_year
                 FROM ultimo_dia ud
             ),
+            -- DÍA desde snapshot raw (tiempo real)
             dia AS (
-                SELECT * FROM daily_data, ultimo_dia
-                WHERE fecha = ultimo_dia.max_date
+                SELECT
+                    MAX(day_gen_kwh) as day_gen_kwh,
+                    MAX(day_use_kwh) as day_use_kwh,
+                    MAX(day_self_use_kwh) as day_self_use_kwh,
+                    MAX(day_export_kwh) as day_export_kwh,
+                    MAX(day_import_kwh) as day_import_kwh
+                FROM raw.fs_energy_daily_snapshot, ultimo_dia
+                WHERE plant_code = $1
+                AND DATE(ts_utc AT TIME ZONE 'America/Bogota') = ultimo_dia.max_date
             ),
+            -- MES desde fs.plant_daily_metrics (histórico)
             mtd AS (
                 SELECT
-                    SUM(day_gen_kwh) as gen_mes,
-                    SUM(day_use_kwh) as consumo_mes,
-                    SUM(day_self_use_kwh) as autoconsumo_mes,
-                    SUM(day_export_kwh) as export_mes,
-                    SUM(day_import_kwh) as import_mes
-                FROM daily_data, params
-                WHERE fecha >= d_ini_mes AND fecha <= d_hoy
+                    SUM(fv_yield_kwh) as gen_mes,
+                    SUM(consumption_kwh) as consumo_mes,
+                    SUM(self_consumption_kwh) as autoconsumo_mes,
+                    SUM(exported_energy_kwh) as export_mes,
+                    SUM(imported_energy_kwh) as import_mes
+                FROM fs.plant_daily_metrics, params
+                WHERE plant_code = $1 AND date >= d_ini_mes AND date <= d_hoy
             ),
+            -- AÑO desde fs.plant_daily_metrics (histórico)
             ytd AS (
                 SELECT
-                    SUM(day_gen_kwh) as gen_ytd,
-                    SUM(day_use_kwh) as consumo_ytd,
-                    SUM(day_self_use_kwh) as autoconsumo_ytd,
-                    SUM(day_export_kwh) as export_ytd,
-                    SUM(day_import_kwh) as import_ytd
-                FROM daily_data, params
-                WHERE fecha >= d_ini_year AND fecha <= d_hoy
+                    SUM(fv_yield_kwh) as gen_ytd,
+                    SUM(consumption_kwh) as consumo_ytd,
+                    SUM(self_consumption_kwh) as autoconsumo_ytd,
+                    SUM(exported_energy_kwh) as export_ytd,
+                    SUM(imported_energy_kwh) as import_ytd
+                FROM fs.plant_daily_metrics, params
+                WHERE plant_code = $1 AND date >= d_ini_year AND date <= d_hoy
             ),
+            -- TOTAL desde fs.plant_daily_metrics (histórico completo)
             total AS (
                 SELECT
-                    SUM(day_gen_kwh) as gen_total,
-                    SUM(day_self_use_kwh) as autoconsumo_total,
-                    SUM(day_export_kwh) as export_total,
-                    MIN(fecha) as start_date
-                FROM daily_data
+                    SUM(fv_yield_kwh) as gen_total,
+                    SUM(self_consumption_kwh) as autoconsumo_total,
+                    SUM(exported_energy_kwh) as export_total,
+                    MIN(date) as start_date
+                FROM fs.plant_daily_metrics
+                WHERE plant_code = $1
             ),
             realtime AS (
                 SELECT power_kw, ts_utc
@@ -269,25 +268,25 @@ export const getPlantDetails = async (req, res) => {
                 ORDER BY ts_utc DESC LIMIT 1
             )
             SELECT
-                -- Día
+                -- Día (snapshot raw)
                 COALESCE(d.day_gen_kwh, 0) as gen_today,
                 COALESCE(d.day_use_kwh, 0) as consumo_today,
                 COALESCE(d.day_self_use_kwh, 0) as autoconsumo_today,
                 COALESCE(d.day_export_kwh, 0) as export_today,
                 COALESCE(d.day_import_kwh, 0) as import_today,
-                -- Mes
+                -- Mes (plant_daily_metrics)
                 COALESCE(m.gen_mes, 0) as gen_month,
                 COALESCE(m.consumo_mes, 0) as consumo_month,
                 COALESCE(m.autoconsumo_mes, 0) as autoconsumo_month,
                 COALESCE(m.export_mes, 0) as export_month,
                 COALESCE(m.import_mes, 0) as import_month,
-                -- Año
+                -- Año (plant_daily_metrics)
                 COALESCE(y.gen_ytd, 0) as gen_year,
                 COALESCE(y.consumo_ytd, 0) as consumo_year,
                 COALESCE(y.autoconsumo_ytd, 0) as autoconsumo_year,
                 COALESCE(y.export_ytd, 0) as export_year,
                 COALESCE(y.import_ytd, 0) as import_year,
-                -- Total
+                -- Total (plant_daily_metrics)
                 COALESCE(t.gen_total, 0) as gen_total,
                 COALESCE(t.autoconsumo_total, 0) as autoconsumo_total,
                 COALESCE(t.export_total, 0) as export_total,
@@ -469,23 +468,15 @@ export const getInvestmentSummary = async (req, res) => {
         const inv = invRes.rows[0];
 
         // 2. Ahorro por Autoconsumo - Cruce mes a mes con tarifa real de Celsia
-        // Suma autoconsumo mensual de raw.fs_energy_daily_snapshot × tarifa mensual de FacCelsia
+        // Suma autoconsumo mensual de fs.plant_daily_metrics × tarifa mensual de FacCelsia
         const autoQuery = `
-            WITH daily_data AS (
+            WITH autoconsumo_mensual AS (
                 SELECT
-                    plant_code,
-                    DATE(ts_utc AT TIME ZONE 'America/Bogota') as fecha,
-                    MAX(day_self_use_kwh) as day_self_use_kwh
-                FROM raw.fs_energy_daily_snapshot
-                GROUP BY plant_code, DATE(ts_utc AT TIME ZONE 'America/Bogota')
-            ),
-            autoconsumo_mensual AS (
-                SELECT
-                    EXTRACT(YEAR FROM fecha) as anio,
-                    EXTRACT(MONTH FROM fecha) as mes_num,
-                    SUM(day_self_use_kwh) as autoconsumo_kwh
-                FROM daily_data
-                GROUP BY EXTRACT(YEAR FROM fecha), EXTRACT(MONTH FROM fecha)
+                    EXTRACT(YEAR FROM date) as anio,
+                    EXTRACT(MONTH FROM date) as mes_num,
+                    SUM(self_consumption_kwh) as autoconsumo_kwh
+                FROM fs.plant_daily_metrics
+                GROUP BY EXTRACT(YEAR FROM date), EXTRACT(MONTH FROM date)
             ),
             tarifa_mensual AS (
                 SELECT
@@ -599,8 +590,8 @@ export const getInvestmentSummary = async (req, res) => {
         const inversionNetaConBeneficios = inversionTotal - beneficioTributarioTotal;
         const saldoNeto = inversionNetaConBeneficios - ingresosOperativos;
 
-        // Meses de operación real
-        const mesesQuery = `SELECT count(DISTINCT to_char(ts_utc AT TIME ZONE 'America/Bogota', 'YYYY-MM')) as meses FROM raw.fs_energy_daily_snapshot`;
+        // Meses de operación real (desde histórico completo)
+        const mesesQuery = `SELECT count(DISTINCT to_char(date, 'YYYY-MM')) as meses FROM fs.plant_daily_metrics`;
         const mesesRes = await dbQuery(mesesQuery);
         const mesesOperacion = parseInt(mesesRes.rows[0].meses || 30);
 
@@ -667,16 +658,9 @@ export const getInvestmentSummary = async (req, res) => {
             ),
             autoconsumo_anio AS (
                 SELECT
-                    COALESCE(SUM(day_self_use_kwh), 0) as kwh_anio
-                FROM (
-                    SELECT
-                        plant_code,
-                        DATE(ts_utc AT TIME ZONE 'America/Bogota') as fecha,
-                        MAX(day_self_use_kwh) as day_self_use_kwh
-                    FROM raw.fs_energy_daily_snapshot
-                    WHERE EXTRACT(YEAR FROM ts_utc AT TIME ZONE 'America/Bogota') = $1
-                    GROUP BY plant_code, DATE(ts_utc AT TIME ZONE 'America/Bogota')
-                ) daily
+                    COALESCE(SUM(self_consumption_kwh), 0) as kwh_anio
+                FROM fs.plant_daily_metrics
+                WHERE EXTRACT(YEAR FROM date) = $1
             )
             SELECT
                 excedentes_anio,
@@ -805,25 +789,17 @@ export const getFinancialHistory = async (req, res) => {
             ORDER BY "Año" ASC, "Mes" ASC
         `;
 
-        // 2. Consulta de autoconsumo desde raw.fs_energy_daily_snapshot (datos reales FusionSolar)
+        // 2. Consulta de autoconsumo desde fs.plant_daily_metrics (histórico completo)
         const autoconsumoQuery = `
-            WITH daily_data AS (
-                SELECT
-                    e.plant_code,
-                    DATE(e.ts_utc AT TIME ZONE 'America/Bogota') as fecha,
-                    MAX(e.day_self_use_kwh) as day_self_use_kwh
-                FROM raw.fs_energy_daily_snapshot e
-                WHERE EXTRACT(YEAR FROM e.ts_utc AT TIME ZONE 'America/Bogota') >= 2023
-                GROUP BY e.plant_code, DATE(e.ts_utc AT TIME ZONE 'America/Bogota')
-            )
             SELECT
                 fp.plant_name,
-                EXTRACT(YEAR FROM d.fecha)::INTEGER as year,
-                EXTRACT(MONTH FROM d.fecha)::INTEGER as month_num,
-                SUM(COALESCE(d.day_self_use_kwh, 0)) as autoconsumo_kwh
-            FROM daily_data d
-            JOIN dim.fs_plants fp ON d.plant_code = fp.plant_code
-            GROUP BY fp.plant_name, EXTRACT(YEAR FROM d.fecha), EXTRACT(MONTH FROM d.fecha)
+                EXTRACT(YEAR FROM m.date)::INTEGER as year,
+                EXTRACT(MONTH FROM m.date)::INTEGER as month_num,
+                SUM(COALESCE(m.self_consumption_kwh, 0)) as autoconsumo_kwh
+            FROM fs.plant_daily_metrics m
+            JOIN dim.fs_plants fp ON m.plant_code = fp.plant_code
+            WHERE EXTRACT(YEAR FROM m.date) >= 2023
+            GROUP BY fp.plant_name, EXTRACT(YEAR FROM m.date), EXTRACT(MONTH FROM m.date)
         `;
 
         // Precio promedio por kWh para valorar autoconsumo (basado en tarifa Celsia histórica)
@@ -917,24 +893,16 @@ export const getFinancialHistory = async (req, res) => {
 };
 
 // Obtener historia de generación consolidada (para gráfica del Dashboard)
-// Fuente: raw.fs_energy_daily_snapshot (datos reales de FusionSolar API)
+// Fuente: fs.plant_daily_metrics (histórico completo)
 export const getGenerationHistory = async (req, res) => {
     try {
-        // Histórico completo desde snapshot raw (datos reales de FusionSolar)
+        // Histórico completo desde plant_daily_metrics
         const query = `
-            WITH daily_data AS (
-                SELECT
-                    plant_code,
-                    DATE(ts_utc AT TIME ZONE 'America/Bogota') as fecha,
-                    MAX(day_gen_kwh) as day_gen_kwh
-                FROM raw.fs_energy_daily_snapshot
-                GROUP BY plant_code, DATE(ts_utc AT TIME ZONE 'America/Bogota')
-            )
             SELECT
-                EXTRACT(YEAR FROM fecha)::int as year,
-                EXTRACT(MONTH FROM fecha)::int as month,
-                SUM(day_gen_kwh) as generation
-            FROM daily_data
+                EXTRACT(YEAR FROM date)::int as year,
+                EXTRACT(MONTH FROM date)::int as month,
+                SUM(fv_yield_kwh) as generation
+            FROM fs.plant_daily_metrics
             GROUP BY 1, 2
             ORDER BY 1, 2
         `;
@@ -1001,27 +969,17 @@ export const getGenerationHistory = async (req, res) => {
 };
 
 // Obtener distribución de energía (Autoconsumo vs Exportación)
-// Fuente: raw.fs_energy_daily_snapshot (datos reales de FusionSolar API)
+// Fuente: fs.plant_daily_metrics (histórico completo)
 export const getEnergyDistribution = async (req, res) => {
     try {
         const query = `
-            WITH daily_data AS (
-                SELECT
-                    plant_code,
-                    DATE(ts_utc AT TIME ZONE 'America/Bogota') as fecha,
-                    MAX(day_gen_kwh) as day_gen_kwh,
-                    MAX(day_self_use_kwh) as day_self_use_kwh,
-                    MAX(day_export_kwh) as day_export_kwh
-                FROM raw.fs_energy_daily_snapshot
-                GROUP BY plant_code, DATE(ts_utc AT TIME ZONE 'America/Bogota')
-            )
             SELECT
-                EXTRACT(YEAR FROM fecha)::int as year,
-                EXTRACT(MONTH FROM fecha)::int as month,
-                SUM(day_self_use_kwh) as autoconsumo_kwh,
-                SUM(day_export_kwh) as exportacion_kwh,
-                SUM(day_gen_kwh) as generacion_total_kwh
-            FROM daily_data
+                EXTRACT(YEAR FROM date)::int as year,
+                EXTRACT(MONTH FROM date)::int as month,
+                SUM(self_consumption_kwh) as autoconsumo_kwh,
+                SUM(exported_energy_kwh) as exportacion_kwh,
+                SUM(fv_yield_kwh) as generacion_total_kwh
+            FROM fs.plant_daily_metrics
             GROUP BY 1, 2
             ORDER BY 1, 2
         `;
