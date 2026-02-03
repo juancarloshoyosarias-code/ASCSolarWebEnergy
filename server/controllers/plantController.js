@@ -1196,3 +1196,152 @@ export const getFacturas = async (req, res) => {
         res.status(500).json({ error: 'Error obteniendo facturas' });
     }
 };
+
+// =====================================================================
+// DIFERENCIAS VS OR (Operador de Red)
+// Compara Importación Celsia vs Importación FusionSolar
+// =====================================================================
+export const getDiferenciasOR = async (req, res) => {
+    try {
+        // Consulta que compara Celsia vs FusionSolar por planta y periodo
+        const query = `
+            WITH celsia_data AS (
+                SELECT
+                    "Planta" as planta,
+                    "Año" as anio,
+                    "Mes" as mes,
+                    "Fecha inicial" as fecha_inicial,
+                    "Fecha final" as fecha_final,
+                    COALESCE("Consumo importando Energia (kWh)", 0) as import_celsia_kwh,
+                    COALESCE("Tarifa aplicada ($/kwh)", 0) as tarifa_kwh,
+                    COALESCE("Consumo importado Subtotal COP", 0) as import_celsia_cop
+                FROM fs."FacCelsia"
+                WHERE "Año" >= 2023
+            ),
+            fusion_data AS (
+                SELECT
+                    pa.alias as planta,
+                    EXTRACT(YEAR FROM m.date)::int as anio,
+                    TO_CHAR(m.date, 'TMMonth') as mes,
+                    MIN(m.date) as fecha_inicial,
+                    MAX(m.date) as fecha_final,
+                    SUM(COALESCE(m.imported_energy_kwh, 0)) as import_fusion_kwh
+                FROM fs.plant_daily_metrics m
+                JOIN fs.plant_alias pa ON pa.plant_id = m.plant_id
+                WHERE m.date >= '2023-01-01'
+                GROUP BY pa.alias, EXTRACT(YEAR FROM m.date), TO_CHAR(m.date, 'TMMonth')
+            ),
+            comparativo AS (
+                SELECT
+                    c.planta,
+                    c.anio,
+                    c.mes,
+                    c.fecha_inicial,
+                    c.fecha_final,
+                    c.import_celsia_kwh,
+                    COALESCE(f.import_fusion_kwh, 0) as import_fusion_kwh,
+                    c.tarifa_kwh,
+                    c.import_celsia_cop,
+                    -- Desfase: Celsia - FusionSolar
+                    -- Positivo = Celsia cobra MÁS de lo que FusionSolar registra
+                    -- Negativo = Celsia cobra MENOS
+                    (c.import_celsia_kwh - COALESCE(f.import_fusion_kwh, 0)) as desfase_kwh,
+                    ROUND(((c.import_celsia_kwh - COALESCE(f.import_fusion_kwh, 0)) * c.tarifa_kwh)::numeric, 0) as desfase_cop,
+                    CASE
+                        WHEN COALESCE(f.import_fusion_kwh, 0) > 0
+                        THEN ROUND(((c.import_celsia_kwh - f.import_fusion_kwh) / f.import_fusion_kwh * 100)::numeric, 1)
+                        ELSE 0
+                    END as desfase_pct
+                FROM celsia_data c
+                LEFT JOIN fusion_data f
+                    ON LOWER(TRIM(c.planta)) = LOWER(TRIM(f.planta))
+                    AND c.anio = f.anio
+                    AND LOWER(TRIM(c.mes)) = LOWER(TRIM(f.mes))
+            )
+            SELECT * FROM comparativo
+            ORDER BY planta, anio DESC,
+                CASE mes
+                    WHEN 'Enero' THEN 1 WHEN 'Febrero' THEN 2 WHEN 'Marzo' THEN 3
+                    WHEN 'Abril' THEN 4 WHEN 'Mayo' THEN 5 WHEN 'Junio' THEN 6
+                    WHEN 'Julio' THEN 7 WHEN 'Agosto' THEN 8 WHEN 'Septiembre' THEN 9
+                    WHEN 'Octubre' THEN 10 WHEN 'Noviembre' THEN 11 WHEN 'Diciembre' THEN 12
+                    ELSE 0
+                END DESC;
+        `;
+
+        const result = await dbQuery(query);
+        const registros = result.rows;
+
+        // Calcular totales
+        let totalCelsiaKwh = 0;
+        let totalFusionKwh = 0;
+        let totalDesfaseKwh = 0;
+        let totalDesfaseCop = 0;
+
+        registros.forEach(r => {
+            totalCelsiaKwh += parseFloat(r.import_celsia_kwh) || 0;
+            totalFusionKwh += parseFloat(r.import_fusion_kwh) || 0;
+            totalDesfaseKwh += parseFloat(r.desfase_kwh) || 0;
+            totalDesfaseCop += parseFloat(r.desfase_cop) || 0;
+        });
+
+        // Totales por planta
+        const totalesPorPlanta = {};
+        registros.forEach(r => {
+            if (!totalesPorPlanta[r.planta]) {
+                totalesPorPlanta[r.planta] = {
+                    planta: r.planta,
+                    celsia_kwh: 0,
+                    fusion_kwh: 0,
+                    desfase_kwh: 0,
+                    desfase_cop: 0
+                };
+            }
+            totalesPorPlanta[r.planta].celsia_kwh += parseFloat(r.import_celsia_kwh) || 0;
+            totalesPorPlanta[r.planta].fusion_kwh += parseFloat(r.import_fusion_kwh) || 0;
+            totalesPorPlanta[r.planta].desfase_kwh += parseFloat(r.desfase_kwh) || 0;
+            totalesPorPlanta[r.planta].desfase_cop += parseFloat(r.desfase_cop) || 0;
+        });
+
+        // Totales por año
+        const totalesPorAnio = {};
+        registros.forEach(r => {
+            if (!totalesPorAnio[r.anio]) {
+                totalesPorAnio[r.anio] = {
+                    anio: r.anio,
+                    celsia_kwh: 0,
+                    fusion_kwh: 0,
+                    desfase_kwh: 0,
+                    desfase_cop: 0
+                };
+            }
+            totalesPorAnio[r.anio].celsia_kwh += parseFloat(r.import_celsia_kwh) || 0;
+            totalesPorAnio[r.anio].fusion_kwh += parseFloat(r.import_fusion_kwh) || 0;
+            totalesPorAnio[r.anio].desfase_kwh += parseFloat(r.desfase_kwh) || 0;
+            totalesPorAnio[r.anio].desfase_cop += parseFloat(r.desfase_cop) || 0;
+        });
+
+        // Plantas y años disponibles para filtros
+        const plantas = [...new Set(registros.map(r => r.planta))].sort();
+        const anios = [...new Set(registros.map(r => r.anio))].sort((a, b) => b - a);
+
+        res.json({
+            registros,
+            totales: {
+                celsia_kwh: Math.round(totalCelsiaKwh),
+                fusion_kwh: Math.round(totalFusionKwh),
+                desfase_kwh: Math.round(totalDesfaseKwh),
+                desfase_cop: Math.round(totalDesfaseCop),
+                desfase_pct: totalFusionKwh > 0 ? Math.round((totalDesfaseKwh / totalFusionKwh) * 1000) / 10 : 0
+            },
+            totales_por_planta: Object.values(totalesPorPlanta),
+            totales_por_anio: Object.values(totalesPorAnio),
+            plantas,
+            anios
+        });
+
+    } catch (err) {
+        console.error('Error fetching diferencias OR:', err);
+        res.status(500).json({ error: 'Error obteniendo diferencias vs OR' });
+    }
+};

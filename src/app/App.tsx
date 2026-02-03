@@ -10,6 +10,7 @@ import { Settings } from './components/settings';
 
 import { GlobalFinancialAnalysis } from './components/global-financial-analysis';
 import { OperationalCosts } from './components/operational-costs';
+import { DiferenciasOR } from './components/diferencias-or';
 
 import { UserProvider } from '@/context/UserContext';
 
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="financiero" element={<GlobalFinancialAnalysis />} />
             <Route path="costos" element={<OperationalCosts />} />
             <Route path="facturas" element={<Facturas />} />
+            <Route path="diferencias-or" element={<DiferenciasOR />} />
             <Route path="reportes" element={<div className="text-center py-12 text-muted-foreground">Reportes - En desarrollo</div>} />
             <Route path="alertas" element={<Alertas />} />
             <Route path="configuracion" element={<Settings />} />

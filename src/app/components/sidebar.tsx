@@ -7,7 +7,8 @@ import {
   Settings,
   ChevronLeft,
   Receipt,
-  Wallet // Icono para Costos
+  Wallet,
+  Scale // Icono para Diferencias OR
 } from 'lucide-react';
 import { useState } from 'react';
 import { mockUser } from '@/data/mockData'; // Importar mockUser
@@ -38,6 +39,7 @@ export function Sidebar({ alertCount = 0 }: SidebarProps) {
     { path: '/financiero', icon: TrendingUp, label: 'Análisis Financiero' },
     { path: '/costos', icon: Wallet, label: 'Costos Operativos' },
     { path: '/facturas', icon: Receipt, label: 'Facturas' },
+    { path: '/diferencias-or', icon: Scale, label: 'Diferencias vs OR' },
     { path: '/alertas', icon: Bell, label: 'Alertas', badge: alertCount },
     { path: '/configuracion', icon: Settings, label: 'Configuración' },
   ];
