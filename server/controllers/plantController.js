@@ -1205,6 +1205,12 @@ export const getDiferenciasOR = async (req, res) => {
                     "Planta" as planta,
                     "Año" as anio,
                     "Mes" as mes,
+                    CASE "Mes"
+                        WHEN 'Enero' THEN 1 WHEN 'Febrero' THEN 2 WHEN 'Marzo' THEN 3
+                        WHEN 'Abril' THEN 4 WHEN 'Mayo' THEN 5 WHEN 'Junio' THEN 6
+                        WHEN 'Julio' THEN 7 WHEN 'Agosto' THEN 8 WHEN 'Septiembre' THEN 9
+                        WHEN 'Octubre' THEN 10 WHEN 'Noviembre' THEN 11 WHEN 'Diciembre' THEN 12
+                    END as mes_num,
                     "Fecha inicial" as fecha_inicial,
                     "Fecha final" as fecha_final,
                     COALESCE("Consumo importando Energia (kWh)", 0) as import_celsia_kwh,
@@ -1215,22 +1221,29 @@ export const getDiferenciasOR = async (req, res) => {
             ),
             fusion_data AS (
                 SELECT
-                    pa.alias as planta,
+                    fp.plant_name as planta,
                     EXTRACT(YEAR FROM m.date)::int as anio,
-                    TO_CHAR(m.date, 'TMMonth') as mes,
+                    EXTRACT(MONTH FROM m.date)::int as mes_num,
+                    CASE EXTRACT(MONTH FROM m.date)::int
+                        WHEN 1 THEN 'Enero' WHEN 2 THEN 'Febrero' WHEN 3 THEN 'Marzo'
+                        WHEN 4 THEN 'Abril' WHEN 5 THEN 'Mayo' WHEN 6 THEN 'Junio'
+                        WHEN 7 THEN 'Julio' WHEN 8 THEN 'Agosto' WHEN 9 THEN 'Septiembre'
+                        WHEN 10 THEN 'Octubre' WHEN 11 THEN 'Noviembre' WHEN 12 THEN 'Diciembre'
+                    END as mes,
                     MIN(m.date) as fecha_inicial,
                     MAX(m.date) as fecha_final,
                     SUM(COALESCE(m.imported_energy_kwh, 0)) as import_fusion_kwh
                 FROM fs.plant_daily_metrics m
-                JOIN fs.plant_alias pa ON pa.plant_id = m.plant_id
+                JOIN dim.fs_plants fp ON fp.plant_code = m.plant_code
                 WHERE m.date >= '2023-01-01'
-                GROUP BY pa.alias, EXTRACT(YEAR FROM m.date), TO_CHAR(m.date, 'TMMonth')
+                GROUP BY fp.plant_name, EXTRACT(YEAR FROM m.date), EXTRACT(MONTH FROM m.date)
             ),
             comparativo AS (
                 SELECT
                     c.planta,
                     c.anio,
                     c.mes,
+                    c.mes_num,
                     c.fecha_inicial,
                     c.fecha_final,
                     c.import_celsia_kwh,
@@ -1251,17 +1264,10 @@ export const getDiferenciasOR = async (req, res) => {
                 LEFT JOIN fusion_data f
                     ON LOWER(TRIM(c.planta)) = LOWER(TRIM(f.planta))
                     AND c.anio = f.anio
-                    AND LOWER(TRIM(c.mes)) = LOWER(TRIM(f.mes))
+                    AND c.mes_num = f.mes_num
             )
             SELECT * FROM comparativo
-            ORDER BY planta, anio DESC,
-                CASE mes
-                    WHEN 'Enero' THEN 1 WHEN 'Febrero' THEN 2 WHEN 'Marzo' THEN 3
-                    WHEN 'Abril' THEN 4 WHEN 'Mayo' THEN 5 WHEN 'Junio' THEN 6
-                    WHEN 'Julio' THEN 7 WHEN 'Agosto' THEN 8 WHEN 'Septiembre' THEN 9
-                    WHEN 'Octubre' THEN 10 WHEN 'Noviembre' THEN 11 WHEN 'Diciembre' THEN 12
-                    ELSE 0
-                END DESC;
+            ORDER BY planta, anio DESC, mes_num DESC;
         `;
 
         const result = await dbQuery(query);
@@ -1320,6 +1326,24 @@ export const getDiferenciasOR = async (req, res) => {
         const plantas = [...new Set(registros.map(r => r.planta))].sort();
         const anios = [...new Set(registros.map(r => r.anio))].sort((a, b) => b - a);
 
+        // Calcular periodo de datos
+        let fechaDesde = null;
+        let fechaHasta = null;
+        if (registros.length > 0) {
+            const fechas = registros
+                .filter(r => r.fecha_inicial)
+                .map(r => new Date(r.fecha_inicial));
+            const fechasFin = registros
+                .filter(r => r.fecha_final)
+                .map(r => new Date(r.fecha_final));
+            if (fechas.length > 0) {
+                fechaDesde = new Date(Math.min(...fechas)).toISOString().split('T')[0];
+            }
+            if (fechasFin.length > 0) {
+                fechaHasta = new Date(Math.max(...fechasFin)).toISOString().split('T')[0];
+            }
+        }
+
         res.json({
             registros,
             totales: {
@@ -1327,7 +1351,9 @@ export const getDiferenciasOR = async (req, res) => {
                 fusion_kwh: Math.round(totalFusionKwh),
                 desfase_kwh: Math.round(totalDesfaseKwh),
                 desfase_cop: Math.round(totalDesfaseCop),
-                desfase_pct: totalFusionKwh > 0 ? Math.round((totalDesfaseKwh / totalFusionKwh) * 1000) / 10 : 0
+                desfase_pct: totalFusionKwh > 0 ? Math.round((totalDesfaseKwh / totalFusionKwh) * 1000) / 10 : 0,
+                fecha_desde: fechaDesde,
+                fecha_hasta: fechaHasta
             },
             totales_por_planta: Object.values(totalesPorPlanta),
             totales_por_anio: Object.values(totalesPorAnio),

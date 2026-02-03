@@ -26,6 +26,8 @@ interface Totales {
     desfase_kwh: number;
     desfase_cop: number;
     desfase_pct: number;
+    fecha_desde: string | null;
+    fecha_hasta: string | null;
 }
 
 interface TotalPorPlanta {
@@ -159,11 +161,18 @@ export function DiferenciasOR() {
                 </Badge>
             </div>
 
+            {/* Periodo de datos */}
+            {data.totales.fecha_desde && data.totales.fecha_hasta && (
+                <div className="text-sm text-muted-foreground">
+                    Periodo: <strong>{data.totales.fecha_desde}</strong> al <strong>{data.totales.fecha_hasta}</strong>
+                </div>
+            )}
+
             {/* Cards Resumen */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardDescription>Import Celsia (kWh)</CardDescription>
+                        <CardDescription>Import Celsia TOTAL (kWh)</CardDescription>
                         <CardTitle className="text-2xl">{formatNumber(data.totales.celsia_kwh)}</CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -173,7 +182,7 @@ export function DiferenciasOR() {
 
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardDescription>Import FusionSolar (kWh)</CardDescription>
+                        <CardDescription>Import FusionSolar TOTAL (kWh)</CardDescription>
                         <CardTitle className="text-2xl">{formatNumber(data.totales.fusion_kwh)}</CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -183,7 +192,7 @@ export function DiferenciasOR() {
 
                 <Card className={desfaseGlobal > 0 ? "border-destructive" : "border-green-500"}>
                     <CardHeader className="pb-2">
-                        <CardDescription>Desfase Total (kWh)</CardDescription>
+                        <CardDescription>Desfase TOTAL (kWh)</CardDescription>
                         <CardTitle className={`text-2xl flex items-center gap-2 ${desfaseGlobal > 0 ? 'text-destructive' : 'text-green-600'}`}>
                             {desfaseGlobal > 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
                             {desfaseGlobal > 0 ? '+' : ''}{formatNumber(data.totales.desfase_kwh)}

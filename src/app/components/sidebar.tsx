@@ -34,8 +34,8 @@ export function Sidebar({ alertCount = 0 }: SidebarProps) {
   const userInitials = getInitials(mockUser.name);
 
   const menuItems = [
-    { path: '/plantas', icon: Sun, label: 'Mis Plantas' },
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/plantas', icon: Sun, label: 'Mis Plantas' },
     { path: '/financiero', icon: TrendingUp, label: 'Análisis Financiero' },
     { path: '/costos', icon: Wallet, label: 'Costos Operativos' },
     { path: '/facturas', icon: Receipt, label: 'Facturas' },
