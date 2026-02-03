@@ -33,9 +33,9 @@ export function Sidebar({ alertCount = 0 }: SidebarProps) {
   const userInitials = getInitials(mockUser.name);
 
   const menuItems = [
+    { path: '/plantas', icon: Sun, label: 'Mis Plantas' },
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/financiero', icon: TrendingUp, label: 'Análisis Financiero' },
-    { path: '/plantas', icon: Sun, label: 'Mis Plantas' },
     { path: '/costos', icon: Wallet, label: 'Costos Operativos' },
     { path: '/facturas', icon: Receipt, label: 'Facturas' },
     { path: '/alertas', icon: Bell, label: 'Alertas', badge: alertCount },
@@ -55,8 +55,8 @@ export function Sidebar({ alertCount = 0 }: SidebarProps) {
           </div>
           {!collapsed && (
             <div>
-              <h1 className="text-lg font-bold text-sidebar-foreground">ASC Energy</h1>
-              <p className="text-xs text-sidebar-foreground/70">Monitoreo Financiero Solar</p>
+              <h1 className="text-lg font-bold text-sidebar-foreground">ASC Solar</h1>
+              <p className="text-xs text-sidebar-foreground/70">Control y Seguimiento Solar</p>
             </div>
           )}
         </div>
