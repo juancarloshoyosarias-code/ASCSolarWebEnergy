@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Building2, DollarSign, Zap, Settings, FileText, Plus, Trash2, Upload } from 'lucide-react';
+import { X, Building2, DollarSign, Zap, Settings, FileText, Plus, Trash2, Upload, TrendingUp } from 'lucide-react';
 
 interface NewPlantModalProps {
     isOpen: boolean;
@@ -26,7 +26,7 @@ interface StringConfig {
 }
 
 export function NewPlantModal({ isOpen, onClose }: NewPlantModalProps) {
-    const [activeTab, setActiveTab] = useState<'general' | 'financial' | 'technical' | 'equipment' | 'documents'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'financial' | 'equipment' | 'technical' | 'projection' | 'documents'>('general');
 
     // Estados para paneles, inversores y strings dinámicos
     const [panels, setPanels] = useState<PanelConfig[]>([
@@ -92,6 +92,9 @@ export function NewPlantModal({ isOpen, onClose }: NewPlantModalProps) {
         availabilityTarget: '98',
         degradationRate: '0.5',
         panelLifespan: '25', // Vida útil paneles (años)
+
+        // Proyección EPCista
+        hpsEpcista: '', // HPS calculado por el EPCista para el proyecto
 
         // Comunicaciones y Monitoreo
         plantCode: '',
@@ -213,8 +216,9 @@ export function NewPlantModal({ isOpen, onClose }: NewPlantModalProps) {
     const tabs = [
         { id: 'general', label: 'General', icon: Building2 },
         { id: 'financial', label: 'Financiero', icon: DollarSign },
-        { id: 'technical', label: 'Técnico', icon: Zap },
         { id: 'equipment', label: 'Equipamiento', icon: Settings },
+        { id: 'technical', label: 'Técnico', icon: Zap },
+        { id: 'projection', label: 'Proyección EPCista', icon: TrendingUp },
         { id: 'documents', label: 'Documentos', icon: FileText },
     ];
 
@@ -426,14 +430,12 @@ export function NewPlantModal({ isOpen, onClose }: NewPlantModalProps) {
                                 <div>
                                     <label className="text-sm font-medium mb-2 block text-foreground">ROI Esperado (%)</label>
                                     <input
-                                        type="number"
-                                        name="expectedROI"
-                                        value={formData.expectedROI}
-                                        onChange={handleChange}
-                                        step="0.1"
-                                        className="w-full border border-border rounded-xl px-4 py-3 bg-background focus:ring-2 focus:ring-primary focus:outline-none"
-                                        placeholder="15.0"
+                                        type="text"
+                                        value="Calculado en Proyección"
+                                        readOnly
+                                        className="w-full border border-border rounded-xl px-4 py-3 bg-muted text-muted-foreground cursor-not-allowed"
                                     />
+                                    <p className="text-xs text-muted-foreground mt-1">Ver pestaña Proyección EPCista</p>
                                 </div>
                             </div>
 
@@ -443,28 +445,24 @@ export function NewPlantModal({ isOpen, onClose }: NewPlantModalProps) {
                                         Payback Con Beneficios (años)
                                     </label>
                                     <input
-                                        type="number"
-                                        name="paybackWithBenefits"
-                                        value={formData.paybackWithBenefits}
-                                        onChange={handleChange}
-                                        step="0.1"
-                                        className="w-full border border-border rounded-xl px-4 py-3 bg-background focus:ring-2 focus:ring-primary focus:outline-none"
-                                        placeholder="3.5"
+                                        type="text"
+                                        value="Calculado en Proyección"
+                                        readOnly
+                                        className="w-full border border-border rounded-xl px-4 py-3 bg-muted text-muted-foreground cursor-not-allowed"
                                     />
+                                    <p className="text-xs text-muted-foreground mt-1">Ver pestaña Proyección EPCista</p>
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium mb-2 block text-foreground">
                                         Payback Sin Beneficios (años)
                                     </label>
                                     <input
-                                        type="number"
-                                        name="paybackNoBenefits"
-                                        value={formData.paybackNoBenefits}
-                                        onChange={handleChange}
-                                        step="0.1"
-                                        className="w-full border border-border rounded-xl px-4 py-3 bg-background focus:ring-2 focus:ring-primary focus:outline-none"
-                                        placeholder="5.5"
+                                        type="text"
+                                        value="Calculado en Proyección"
+                                        readOnly
+                                        className="w-full border border-border rounded-xl px-4 py-3 bg-muted text-muted-foreground cursor-not-allowed"
                                     />
+                                    <p className="text-xs text-muted-foreground mt-1">Ver pestaña Proyección EPCista</p>
                                 </div>
                             </div>
 
@@ -1115,6 +1113,206 @@ export function NewPlantModal({ isOpen, onClose }: NewPlantModalProps) {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* Tab: Projection EPCista */}
+                    {activeTab === 'projection' && (
+                        <div className="space-y-6">
+                            <div className="bg-green-50 dark:bg-green-950/20 rounded-xl p-4 mb-4">
+                                <h3 className="text-sm font-semibold text-green-900 dark:text-green-100 mb-2">📊 Proyección de Generación EPCista</h3>
+                                <p className="text-xs text-green-800 dark:text-green-200">
+                                    Configure los parámetros del EPCista para calcular la proyección de generación año a año considerando la degradación de los paneles.
+                                </p>
+                            </div>
+
+                            {/* Parámetros de Proyección */}
+                            <div className="bg-muted/30 rounded-xl p-4">
+                                <h3 className="text-sm font-semibold text-foreground mb-3">Parámetros del EPCista</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div>
+                                        <label className="text-sm font-medium mb-2 block text-foreground">
+                                            Capacidad Instalada (kWp)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={calculateCapacity()}
+                                            readOnly
+                                            className="w-full border border-border rounded-xl px-4 py-3 bg-muted text-muted-foreground cursor-not-allowed"
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1">Desde Equipamiento</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium mb-2 block text-foreground">
+                                            HPS EPCista (h/día) <span className="text-destructive">*</span>
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="hpsEpcista"
+                                            value={formData.hpsEpcista}
+                                            onChange={handleChange}
+                                            step="0.01"
+                                            className="w-full border border-border rounded-xl px-4 py-3 bg-background focus:ring-2 focus:ring-primary focus:outline-none"
+                                            placeholder="4.5"
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1">Horas Pico Solar calculadas</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium mb-2 block text-foreground">
+                                            Degradación (%/año)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="degradationRate"
+                                            value={formData.degradationRate}
+                                            onChange={handleChange}
+                                            step="0.1"
+                                            className="w-full border border-border rounded-xl px-4 py-3 bg-background focus:ring-2 focus:ring-primary focus:outline-none"
+                                            placeholder="0.5"
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1">Típico: 0.4-0.7%</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium mb-2 block text-foreground">
+                                            Vida Útil (años)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="panelLifespan"
+                                            value={formData.panelLifespan}
+                                            onChange={handleChange}
+                                            className="w-full border border-border rounded-xl px-4 py-3 bg-background focus:ring-2 focus:ring-primary focus:outline-none"
+                                            placeholder="25"
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1">Típico: 25-30 años</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Tabla de Proyección */}
+                            {formData.hpsEpcista && parseFloat(calculateCapacity()) > 0 && (
+                                <div className="bg-muted/30 rounded-xl p-4">
+                                    <h3 className="text-sm font-semibold text-foreground mb-3">📈 Proyección de Generación Anual</h3>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="border-b border-border">
+                                                    <th className="text-left py-2 px-3 font-medium text-muted-foreground">Año</th>
+                                                    <th className="text-right py-2 px-3 font-medium text-muted-foreground">Factor Degradación</th>
+                                                    <th className="text-right py-2 px-3 font-medium text-muted-foreground">Generación Esperada (kWh/año)</th>
+                                                    <th className="text-right py-2 px-3 font-medium text-muted-foreground">Generación Diaria (kWh)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {(() => {
+                                                    const capacity = parseFloat(calculateCapacity()) || 0;
+                                                    const hps = parseFloat(formData.hpsEpcista) || 0;
+                                                    const degradation = parseFloat(formData.degradationRate) || 0.5;
+                                                    const lifespan = parseInt(formData.panelLifespan) || 25;
+
+                                                    // Generación año 1 = Capacidad * HPS * 365 días
+                                                    const genYear1 = capacity * hps * 365;
+
+                                                    const rows = [];
+                                                    for (let year = 1; year <= Math.min(lifespan, 30); year++) {
+                                                        // Factor de degradación acumulado
+                                                        const factor = Math.pow(1 - degradation / 100, year - 1);
+                                                        const genYear = genYear1 * factor;
+                                                        const genDaily = genYear / 365;
+
+                                                        rows.push(
+                                                            <tr key={year} className={`border-b border-border/50 ${year === 1 ? 'bg-primary/5' : ''}`}>
+                                                                <td className="py-2 px-3 font-medium">{year}</td>
+                                                                <td className="py-2 px-3 text-right">{(factor * 100).toFixed(2)}%</td>
+                                                                <td className="py-2 px-3 text-right font-semibold">{genYear.toLocaleString('es-CO', { maximumFractionDigits: 0 })}</td>
+                                                                <td className="py-2 px-3 text-right">{genDaily.toFixed(1)}</td>
+                                                            </tr>
+                                                        );
+                                                    }
+                                                    return rows;
+                                                })()}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr className="bg-primary/10 font-semibold">
+                                                    <td className="py-2 px-3">TOTAL</td>
+                                                    <td className="py-2 px-3 text-right">-</td>
+                                                    <td className="py-2 px-3 text-right">
+                                                        {(() => {
+                                                            const capacity = parseFloat(calculateCapacity()) || 0;
+                                                            const hps = parseFloat(formData.hpsEpcista) || 0;
+                                                            const degradation = parseFloat(formData.degradationRate) || 0.5;
+                                                            const lifespan = parseInt(formData.panelLifespan) || 25;
+                                                            const genYear1 = capacity * hps * 365;
+
+                                                            let total = 0;
+                                                            for (let year = 1; year <= Math.min(lifespan, 30); year++) {
+                                                                const factor = Math.pow(1 - degradation / 100, year - 1);
+                                                                total += genYear1 * factor;
+                                                            }
+                                                            return total.toLocaleString('es-CO', { maximumFractionDigits: 0 }) + ' kWh';
+                                                        })()}
+                                                    </td>
+                                                    <td className="py-2 px-3 text-right">-</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Mensaje si faltan datos */}
+                            {(!formData.hpsEpcista || parseFloat(calculateCapacity()) === 0) && (
+                                <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-4 text-center">
+                                    <p className="text-sm text-amber-900 dark:text-amber-100">
+                                        ⚠️ Complete la <strong>Capacidad</strong> (en Equipamiento) y el <strong>HPS EPCista</strong> para ver la proyección.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Resumen Financiero Proyectado */}
+                            {formData.hpsEpcista && parseFloat(calculateCapacity()) > 0 && formData.investment && (
+                                <div className="bg-blue-50 dark:bg-blue-950/20 rounded-xl p-4">
+                                    <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">💰 Resumen Proyectado</h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        {(() => {
+                                            const capacity = parseFloat(calculateCapacity()) || 0;
+                                            const hps = parseFloat(formData.hpsEpcista) || 0;
+                                            const investment = parseFloat(formData.investment) || 0;
+                                            const genYear1 = capacity * hps * 365;
+
+                                            // Precio promedio kWh (estimado)
+                                            const precioKwh = 800; // COP/kWh
+                                            const ahorroAnual = genYear1 * precioKwh;
+                                            const paybackSimple = investment / ahorroAnual;
+                                            const roiAnual = (ahorroAnual / investment) * 100;
+
+                                            return (
+                                                <>
+                                                    <div className="text-center">
+                                                        <p className="text-xs text-muted-foreground">Gen. Año 1</p>
+                                                        <p className="text-lg font-bold text-foreground">{(genYear1 / 1000).toFixed(1)} MWh</p>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <p className="text-xs text-muted-foreground">Ahorro Anual Est.</p>
+                                                        <p className="text-lg font-bold text-green-600">${(ahorroAnual / 1000000).toFixed(1)}M</p>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <p className="text-xs text-muted-foreground">Payback Simple</p>
+                                                        <p className="text-lg font-bold text-foreground">{paybackSimple.toFixed(1)} años</p>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <p className="text-xs text-muted-foreground">ROI Anual</p>
+                                                        <p className="text-lg font-bold text-primary">{roiAnual.toFixed(1)}%</p>
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-3 text-center">
+                                        * Estimado con precio promedio de $800 COP/kWh. Los valores reales dependen de la tarifa de energía.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
 
