@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import plantRoutes from './routes/plants.js';
+import uploadRoutes from './routes/upload.js';
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/plants', plantRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Servir archivos estáticos del frontend (producción)
 const distPath = path.join(__dirname, '..', 'dist');

@@ -79,6 +79,8 @@ export function Facturas() {
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [selectedFactura, setSelectedFactura] = useState<Factura | null>(null);
     const [uploadSuccess, setUploadSuccess] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [uploadResults, setUploadResults] = useState<{processed: number; failed: number; results: any[]; errors: any[]} | null>(null);
     const [expandedRows, setExpandedRows] = useState<number[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -149,15 +151,49 @@ export function Facturas() {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            setTimeout(() => {
+            setUploading(true);
+            setUploadResults(null);
+
+            try {
+                const formData = new FormData();
+                Array.from(e.target.files).forEach(file => {
+                    formData.append('files', file);
+                });
+
+                const response = await fetch(`${API_URL}/api/upload/facturas`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al subir las facturas');
+                }
+
+                const result = await response.json();
+                setUploadResults(result);
                 setUploadSuccess(true);
+
+                // Refrescar lista de facturas después de 3 segundos
                 setTimeout(() => {
                     setShowUploadModal(false);
                     setUploadSuccess(false);
-                }, 2000);
-            }, 1500);
+                    setUploadResults(null);
+                    // Trigger refetch
+                    setFilterYear(prev => prev);
+                    window.location.reload();
+                }, 3000);
+
+            } catch (err: any) {
+                setUploadResults({ processed: 0, failed: 1, results: [], errors: [{ error: err.message }] });
+            } finally {
+                setUploading(false);
+                // Reset file input
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            }
         }
     };
 
@@ -410,30 +446,89 @@ export function Facturas() {
             {/* Modal Cargar Factura */}
             {showUploadModal && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-card w-full max-w-md rounded-2xl border border-border shadow-xl overflow-hidden">
+                    <div className="bg-card w-full max-w-lg rounded-2xl border border-border shadow-xl overflow-hidden">
                         <div className="flex justify-between items-center p-6 border-b border-border">
-                            <h2 className="text-xl font-bold">Cargar Factura PDF</h2>
-                            <button onClick={() => setShowUploadModal(false)} className="p-2 hover:bg-muted rounded-lg">
+                            <h2 className="text-xl font-bold">Cargar Facturas PDF</h2>
+                            <button onClick={() => { setShowUploadModal(false); setUploadResults(null); setUploadSuccess(false); }} className="p-2 hover:bg-muted rounded-lg">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
                         <div className="p-6">
-                            {!uploadSuccess ? (
+                            {uploading ? (
+                                <div className="text-center py-8">
+                                    <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin mb-4" />
+                                    <p className="font-bold text-lg">Procesando facturas...</p>
+                                    <p className="text-sm text-muted-foreground mt-2">Extrayendo datos con OCR</p>
+                                </div>
+                            ) : uploadSuccess && uploadResults ? (
+                                <div className="py-4">
+                                    <div className="text-center mb-6">
+                                        <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                                            <Check className="w-8 h-8 text-emerald-600" />
+                                        </div>
+                                        <p className="font-bold text-lg text-emerald-600">¡Procesamiento completado!</p>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            {uploadResults.processed} exitosas, {uploadResults.failed} con errores
+                                        </p>
+                                    </div>
+
+                                    {/* Resultados exitosos */}
+                                    {uploadResults.results.length > 0 && (
+                                        <div className="mb-4">
+                                            <p className="text-xs font-semibold text-emerald-600 uppercase mb-2">Facturas procesadas:</p>
+                                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                                                {uploadResults.results.map((r: any, i: number) => (
+                                                    <div key={i} className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800 text-sm">
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <p className="font-medium">{r.data.planta}</p>
+                                                                <p className="text-xs text-muted-foreground">{r.data.mes} {r.data.anio}</p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="font-bold text-emerald-600">{formatCOP(r.data.totalPagar || 0)}</p>
+                                                                <p className="text-xs text-muted-foreground">{formatNumber(r.data.consumoKwh || 0)} kWh</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Errores */}
+                                    {uploadResults.errors.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-red-600 uppercase mb-2">Con errores:</p>
+                                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                                                {uploadResults.errors.map((e: any, i: number) => (
+                                                    <div key={i} className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 text-sm">
+                                                        <p className="font-medium text-red-700 dark:text-red-400">{e.filename || 'Error'}</p>
+                                                        <p className="text-xs text-red-600 dark:text-red-300">{e.error}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <p className="text-xs text-muted-foreground text-center mt-4">Recargando página...</p>
+                                </div>
+                            ) : (
                                 <>
                                     <div
                                         onClick={handleUploadClick}
                                         className="border-2 border-dashed border-border rounded-xl p-12 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all"
                                     >
                                         <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                                        <p className="text-sm font-medium mb-1">Arrastra tu factura o haz clic para subir</p>
-                                        <p className="text-xs text-muted-foreground">PDF, máximo 10MB</p>
+                                        <p className="text-sm font-medium mb-1">Arrastra tus facturas o haz clic para subir</p>
+                                        <p className="text-xs text-muted-foreground">PDF, máximo 10MB por archivo, hasta 20 archivos</p>
                                     </div>
                                     <input
                                         type="file"
                                         ref={fileInputRef}
                                         onChange={handleFileChange}
                                         accept=".pdf"
+                                        multiple
                                         className="hidden"
                                     />
 
@@ -441,22 +536,11 @@ export function Facturas() {
                                         <p className="text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2">
                                             <Zap className="w-4 h-4 shrink-0 mt-0.5" />
                                             <span>
-                                                <strong>Procesamiento automático:</strong> El sistema detectará automáticamente el tipo de factura y extraerá todos los datos usando OCR inteligente.
+                                                <strong>Procesamiento automático:</strong> El sistema detectará automáticamente el tipo de factura y extraerá todos los datos usando OCR inteligente. Si la factura ya existe (mismo código/mes/año), se actualizará.
                                             </span>
                                         </p>
                                     </div>
                                 </>
-                            ) : (
-                                <div className="text-center py-8">
-                                    <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4 animate-bounce">
-                                        <Check className="w-8 h-8 text-emerald-600" />
-                                    </div>
-                                    <p className="font-bold text-lg text-emerald-600">¡Factura procesada exitosamente!</p>
-                                    <p className="text-sm text-muted-foreground mt-2">Extrayendo datos con OCR...</p>
-                                    <div className="mt-4 h-2 bg-muted rounded-full overflow-hidden">
-                                        <div className="h-full bg-emerald-500 rounded-full animate-pulse" style={{ width: '100%' }}></div>
-                                    </div>
-                                </div>
                             )}
                         </div>
                     </div>
