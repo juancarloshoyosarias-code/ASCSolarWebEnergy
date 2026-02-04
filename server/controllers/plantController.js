@@ -31,18 +31,21 @@ export const getPlantsSummary = async (req, res) => {
                     COALESCE(fp.hps_reference, 4.0) AS hps_obj
                 FROM dim.fs_plants fp
             ),
-            -- Datos del DÍA desde raw.fs_energy_daily_snapshot (tiempo real)
+            -- Datos del DÍA desde raw.fs_energy_daily_snapshot (ÚLTIMO registro, no MAX)
             daily_snapshot AS (
-                SELECT
+                SELECT DISTINCT ON (plant_code)
                     plant_code,
                     DATE(ts_utc AT TIME ZONE 'America/Bogota') as fecha,
-                    MAX(day_gen_kwh) as day_gen_kwh,
-                    MAX(day_use_kwh) as day_use_kwh,
-                    MAX(day_self_use_kwh) as day_self_use_kwh,
-                    MAX(day_export_kwh) as day_export_kwh,
-                    MAX(day_import_kwh) as day_import_kwh
+                    day_gen_kwh,
+                    day_use_kwh,
+                    day_self_use_kwh,
+                    day_export_kwh,
+                    day_import_kwh
                 FROM raw.fs_energy_daily_snapshot
-                GROUP BY plant_code, DATE(ts_utc AT TIME ZONE 'America/Bogota')
+                WHERE DATE(ts_utc AT TIME ZONE 'America/Bogota') = (
+                    SELECT MAX(DATE(ts_utc AT TIME ZONE 'America/Bogota')) FROM raw.fs_energy_daily_snapshot
+                )
+                ORDER BY plant_code, ts_utc DESC
             ),
             -- Métricas del DÍA (desde snapshot raw - tiempo real)
             gen_dia AS (
