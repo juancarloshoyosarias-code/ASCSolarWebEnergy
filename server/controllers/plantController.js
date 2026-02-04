@@ -1214,7 +1214,7 @@ export const getDiferenciasOR = async (req, res) => {
                     "Fecha inicial" as fecha_inicial,
                     "Fecha final" as fecha_final,
                     COALESCE("Consumo importando Energia (kWh)", 0) as import_celsia_kwh,
-                    COALESCE("Tarifa aplicada ($/kwh)", 0) as tarifa_kwh,
+                    COALESCE("Consumo importado tarifa (COP)", 0) as tarifa_kwh,
                     COALESCE("Consumo importado Subtotal COP", 0) as import_celsia_cop
                 FROM fs."FacCelsia"
                 WHERE "Año" >= 2023

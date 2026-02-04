@@ -56,11 +56,13 @@ interface DiferenciasData {
 }
 
 const formatNumber = (num: number): string => {
-    return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(num);
+    const val = parseFloat(String(num)) || 0;
+    return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(val);
 };
 
 const formatCurrency = (num: number): string => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(num);
+    const val = parseFloat(String(num)) || 0;
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
 };
 
 export function DiferenciasOR() {
@@ -111,10 +113,10 @@ export function DiferenciasOR() {
 
     // Calcular totales filtrados
     const totalesFiltrados = registrosFiltrados.reduce((acc, r) => ({
-        celsia_kwh: acc.celsia_kwh + (r.import_celsia_kwh || 0),
-        fusion_kwh: acc.fusion_kwh + (r.import_fusion_kwh || 0),
-        desfase_kwh: acc.desfase_kwh + (r.desfase_kwh || 0),
-        desfase_cop: acc.desfase_cop + (r.desfase_cop || 0)
+        celsia_kwh: acc.celsia_kwh + (parseFloat(String(r.import_celsia_kwh)) || 0),
+        fusion_kwh: acc.fusion_kwh + (parseFloat(String(r.import_fusion_kwh)) || 0),
+        desfase_kwh: acc.desfase_kwh + (parseFloat(String(r.desfase_kwh)) || 0),
+        desfase_cop: acc.desfase_cop + (parseFloat(String(r.desfase_cop)) || 0)
     }), { celsia_kwh: 0, fusion_kwh: 0, desfase_kwh: 0, desfase_cop: 0 });
 
     const handleSort = (key: string) => {
