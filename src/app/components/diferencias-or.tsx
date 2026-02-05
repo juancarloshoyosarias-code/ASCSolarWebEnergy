@@ -148,18 +148,18 @@ export function DiferenciasOR() {
     const desfasePct = data.totales.desfase_pct;
 
     return (
-        <div className="space-y-6 p-6">
+        <div className="space-y-4 md:space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground">Diferencias vs OR</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Comparativo Importación Celsia vs FusionSolar (Operador de Red)
+                    <h1 className="text-2xl md:text-3xl font-bold text-foreground">Diferencias vs OR</h1>
+                    <p className="text-sm md:text-base text-muted-foreground mt-1">
+                        Comparativo Importación Celsia vs FusionSolar
                     </p>
                 </div>
-                <Badge variant={desfaseGlobal > 0 ? "destructive" : "default"} className="text-lg px-4 py-2">
-                    <Scale className="w-5 h-5 mr-2" />
-                    Desfase Global: {formatNumber(Math.abs(desfaseGlobal))} kWh ({desfasePct}%)
+                <Badge variant={desfaseGlobal > 0 ? "destructive" : "default"} className="text-sm md:text-lg px-3 py-1.5 md:px-4 md:py-2 self-start md:self-auto">
+                    <Scale className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2" />
+                    <span className="hidden sm:inline">Desfase Global: </span>{formatNumber(Math.abs(desfaseGlobal))} kWh
                 </Badge>
             </div>
 
@@ -171,67 +171,68 @@ export function DiferenciasOR() {
             )}
 
             {/* Cards Resumen */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 <Card>
-                    <CardHeader className="pb-2">
-                        <CardDescription>Import Celsia TOTAL (kWh)</CardDescription>
-                        <CardTitle className="text-2xl">{formatNumber(data.totales.celsia_kwh)}</CardTitle>
+                    <CardHeader className="pb-2 p-3 md:p-6 md:pb-2">
+                        <CardDescription className="text-xs md:text-sm">Celsia (kWh)</CardDescription>
+                        <CardTitle className="text-lg md:text-2xl">{formatNumber(data.totales.celsia_kwh)}</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <p className="text-xs text-muted-foreground">Según facturas comercializador</p>
+                    <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                        <p className="text-xs text-muted-foreground hidden md:block">Según facturas comercializador</p>
                     </CardContent>
                 </Card>
 
                 <Card>
-                    <CardHeader className="pb-2">
-                        <CardDescription>Import FusionSolar TOTAL (kWh)</CardDescription>
-                        <CardTitle className="text-2xl">{formatNumber(data.totales.fusion_kwh)}</CardTitle>
+                    <CardHeader className="pb-2 p-3 md:p-6 md:pb-2">
+                        <CardDescription className="text-xs md:text-sm">FusionSolar (kWh)</CardDescription>
+                        <CardTitle className="text-lg md:text-2xl">{formatNumber(data.totales.fusion_kwh)}</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <p className="text-xs text-muted-foreground">Según medidor inversor</p>
+                    <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                        <p className="text-xs text-muted-foreground hidden md:block">Según medidor inversor</p>
                     </CardContent>
                 </Card>
 
                 <Card className={desfaseGlobal > 0 ? "border-destructive" : "border-green-500"}>
-                    <CardHeader className="pb-2">
-                        <CardDescription>Desfase TOTAL (kWh)</CardDescription>
-                        <CardTitle className={`text-2xl flex items-center gap-2 ${desfaseGlobal > 0 ? 'text-destructive' : 'text-green-600'}`}>
-                            {desfaseGlobal > 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                    <CardHeader className="pb-2 p-3 md:p-6 md:pb-2">
+                        <CardDescription className="text-xs md:text-sm">Desfase (kWh)</CardDescription>
+                        <CardTitle className={`text-lg md:text-2xl flex items-center gap-1 md:gap-2 ${desfaseGlobal > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                            {desfaseGlobal > 0 ? <TrendingUp className="w-4 h-4 md:w-5 md:h-5" /> : <TrendingDown className="w-4 h-4 md:w-5 md:h-5" />}
                             {desfaseGlobal > 0 ? '+' : ''}{formatNumber(data.totales.desfase_kwh)}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <p className="text-xs text-muted-foreground">
-                            {desfaseGlobal > 0 ? 'Celsia cobra MÁS que FusionSolar' : 'Celsia cobra MENOS'}
+                    <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                        <p className="text-xs text-muted-foreground hidden md:block">
+                            {desfaseGlobal > 0 ? 'Celsia cobra MÁS' : 'Celsia cobra MENOS'}
                         </p>
                     </CardContent>
                 </Card>
 
                 <Card className={desfaseGlobal > 0 ? "border-destructive" : "border-green-500"}>
-                    <CardHeader className="pb-2">
-                        <CardDescription>Impacto Económico (COP)</CardDescription>
-                        <CardTitle className={`text-2xl ${desfaseGlobal > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                    <CardHeader className="pb-2 p-3 md:p-6 md:pb-2">
+                        <CardDescription className="text-xs md:text-sm">Impacto (COP)</CardDescription>
+                        <CardTitle className={`text-lg md:text-2xl ${desfaseGlobal > 0 ? 'text-destructive' : 'text-green-600'}`}>
                             {formatCurrency(Math.abs(data.totales.desfase_cop))}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <p className="text-xs text-muted-foreground">
-                            {desfaseGlobal > 0 ? 'Sobrecosto por diferencia' : 'Ahorro por diferencia'}
+                    <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                        <p className="text-xs text-muted-foreground hidden md:block">
+                            {desfaseGlobal > 0 ? 'Sobrecosto' : 'Ahorro'}
                         </p>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Resumen por Planta */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <AlertTriangle className="w-5 h-5" />
+                    <CardHeader className="p-4 md:p-6">
+                        <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                            <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />
                             Desfase por Planta
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0 md:p-6 md:pt-0">
+                        <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -258,14 +259,16 @@ export function DiferenciasOR() {
                                 ))}
                             </TableBody>
                         </Table>
+                        </div>
                     </CardContent>
                 </Card>
 
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Desfase por Año</CardTitle>
+                    <CardHeader className="p-4 md:p-6">
+                        <CardTitle className="text-base md:text-lg">Desfase por Año</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0 md:p-6 md:pt-0">
+                        <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -292,22 +295,23 @@ export function DiferenciasOR() {
                                 ))}
                             </TableBody>
                         </Table>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Detalle Mensual */}
             <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Detalle Mensual</CardTitle>
-                        <div className="flex gap-4">
+                <CardHeader className="p-4 md:p-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <CardTitle className="text-base md:text-lg">Detalle Mensual</CardTitle>
+                        <div className="flex gap-2 md:gap-4">
                             <Select value={filtroPlanta} onValueChange={setFiltroPlanta}>
-                                <SelectTrigger className="w-48">
-                                    <SelectValue placeholder="Filtrar por planta" />
+                                <SelectTrigger className="w-36 md:w-48 text-sm">
+                                    <SelectValue placeholder="Planta" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Todas las plantas</SelectItem>
+                                    <SelectItem value="all">Todas</SelectItem>
                                     {data.plantas.map(p => (
                                         <SelectItem key={p} value={p}>{p}</SelectItem>
                                     ))}
@@ -315,7 +319,7 @@ export function DiferenciasOR() {
                             </Select>
 
                             <Select value={filtroAnio} onValueChange={setFiltroAnio}>
-                                <SelectTrigger className="w-32">
+                                <SelectTrigger className="w-24 md:w-32 text-sm">
                                     <SelectValue placeholder="Año" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -399,19 +403,21 @@ export function DiferenciasOR() {
                     </div>
 
                     {/* Totales filtrados */}
-                    <div className="mt-4 p-4 bg-muted/50 rounded-lg flex justify-between items-center">
-                        <span className="font-semibold">
-                            Totales ({registrosFiltrados.length} registros)
-                        </span>
-                        <div className="flex gap-8">
-                            <span>Celsia: <strong>{formatNumber(totalesFiltrados.celsia_kwh)}</strong> kWh</span>
-                            <span>Fusion: <strong>{formatNumber(totalesFiltrados.fusion_kwh)}</strong> kWh</span>
-                            <span className={totalesFiltrados.desfase_kwh > 0 ? 'text-destructive' : 'text-green-600'}>
-                                Desfase: <strong>{formatNumber(totalesFiltrados.desfase_kwh)}</strong> kWh
+                    <div className="mt-4 p-3 md:p-4 bg-muted/50 rounded-lg">
+                        <div className="flex flex-col md:flex-row justify-between gap-2 md:items-center">
+                            <span className="font-semibold text-sm md:text-base">
+                                Totales ({registrosFiltrados.length} reg.)
                             </span>
-                            <span className={totalesFiltrados.desfase_cop > 0 ? 'text-destructive' : 'text-green-600'}>
-                                <strong>{formatCurrency(totalesFiltrados.desfase_cop)}</strong>
-                            </span>
+                            <div className="grid grid-cols-2 md:flex gap-2 md:gap-6 text-xs md:text-sm">
+                                <span>Celsia: <strong>{formatNumber(totalesFiltrados.celsia_kwh)}</strong></span>
+                                <span>Fusion: <strong>{formatNumber(totalesFiltrados.fusion_kwh)}</strong></span>
+                                <span className={totalesFiltrados.desfase_kwh > 0 ? 'text-destructive' : 'text-green-600'}>
+                                    Desfase: <strong>{formatNumber(totalesFiltrados.desfase_kwh)}</strong> kWh
+                                </span>
+                                <span className={totalesFiltrados.desfase_cop > 0 ? 'text-destructive' : 'text-green-600'}>
+                                    <strong>{formatCurrency(totalesFiltrados.desfase_cop)}</strong>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </CardContent>
