@@ -15,9 +15,10 @@ import { mockUser } from '@/data/mockData'; // Importar mockUser
 
 interface SidebarProps {
   alertCount?: number;
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ alertCount = 0 }: SidebarProps) {
+export function Sidebar({ alertCount = 0, onNavigate }: SidebarProps) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -74,6 +75,7 @@ export function Sidebar({ alertCount = 0 }: SidebarProps) {
             <Link
               key={item.path}
               to={item.path}
+              onClick={onNavigate}
               className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors relative ${isActive
                 ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                 : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'

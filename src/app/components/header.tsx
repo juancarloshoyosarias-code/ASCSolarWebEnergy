@@ -1,13 +1,15 @@
-import { Search, Bell, User, LogOut } from 'lucide-react';
+import { Search, Bell, User, LogOut, Menu } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@/context/UserContext';
 
 interface HeaderProps {
   alertCount?: number;
+  onMenuClick?: () => void;
+  showMenuButton?: boolean;
 }
 
-export function Header({ alertCount = 0 }: HeaderProps) {
+export function Header({ alertCount = 0, onMenuClick, showMenuButton = false }: HeaderProps) {
   const navigate = useNavigate();
   const { user } = useUser();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -40,8 +42,18 @@ export function Header({ alertCount = 0 }: HeaderProps) {
     .toUpperCase();
 
   return (
-    <header className="bg-card border-b border-border px-6 py-4">
-      <div className="flex items-center justify-between">
+    <header className="bg-card border-b border-border px-4 md:px-6 py-3 md:py-4">
+      <div className="flex items-center justify-between gap-3">
+        {/* Menu button (mobile) */}
+        {showMenuButton && (
+          <button
+            onClick={onMenuClick}
+            className="p-2 rounded-lg hover:bg-muted transition-colors md:hidden"
+          >
+            <Menu className="w-6 h-6 text-foreground" />
+          </button>
+        )}
+
         {/* Search */}
         <div className="flex-1 max-w-2xl">
           <div className="relative">
@@ -51,7 +63,7 @@ export function Header({ alertCount = 0 }: HeaderProps) {
               placeholder="Buscar plantas..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-input-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-input-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm md:text-base"
             />
           </div>
         </div>

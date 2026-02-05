@@ -36,8 +36,10 @@ export function PlantDetail() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('resumen');
   const [filterType, setFilterType] = useState<'total' | 'dia' | 'mes' | 'anio'>('mes');
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [selectedMonth, setSelectedMonth] = useState<number>(1); // Enero
+  // Fechas dinámicas basadas en la fecha actual
+  const currentDate = new Date();
+  const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth() + 1); // Mes actual (1-12)
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [expandedYears, setExpandedYears] = useState<number[]>([]);
 
@@ -117,9 +119,15 @@ export function PlantDetail() {
             pr_obj: pr,
             current_power: toNum(foundPlant.current_power),
 
-            // Campos que aún no vienen del backend (usar mock como fallback)
-            efficiency: mockPlant?.efficiency || 85,
-            hsp: hps || mockPlant?.hsp || 4.2,
+            // Calcular PR real basado en datos reales
+            // PR = (Gen Total / (Capacidad × HPS_obj × Días Operando)) × 100
+            efficiency: (() => {
+              const diasOperando = toNum(foundPlant.days_in_operation) || 1;
+              const genTotal = toNum(foundPlant.gen_total) || 0;
+              const expectedGen = capacity * hps * diasOperando;
+              return expectedGen > 0 ? Math.min(Math.round((genTotal / expectedGen) * 1000) / 10, 100) : 85;
+            })(),
+            hsp: hps || 4.0,
             investment: mockPlant?.investment || 400000000,
             savingsTotal: mockPlant?.savingsTotal || 120000000,
             paybackYears: mockPlant?.paybackYears || 5,

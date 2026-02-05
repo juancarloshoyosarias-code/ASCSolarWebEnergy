@@ -413,6 +413,7 @@ export function GlobalFinancialAnalysis() {
                                 <p className="mt-1 text-[10px]">
                                     Basado en promedio mensual: {formatShortCOP(investmentData.indicadores_reales?.ahorro_mensual_promedio || 0)}
                                 </p>
+                                <p className="mt-1 text-[9px] italic text-blue-500">Si continúa al ritmo actual</p>
                             </div>
                         </div>
                     ) : (
@@ -440,16 +441,16 @@ export function GlobalFinancialAnalysis() {
                     </div>
                 </div>
 
-                {/* 6. Payback - REAL vs PROYECTADO */}
+                {/* 6. Payback - ACTUAL vs IDEAL */}
                 <div className="bg-card border border-border p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
                     <p className="text-xs text-muted-foreground uppercase font-semibold mb-2">Payback</p>
 
                     {investmentData ? (
                         <div className="space-y-3">
-                            {/* REAL */}
+                            {/* ACTUAL */}
                             <div className="p-3 bg-orange-50 rounded-lg border border-orange-100">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs font-medium text-orange-700">REAL (Histórico)</span>
+                                    <span className="text-xs font-medium text-orange-700">ACTUAL</span>
                                     <span className="text-lg font-bold text-orange-600">
                                         {investmentData.indicadores_reales?.payback_con_beneficios || 0} años
                                     </span>
@@ -458,12 +459,13 @@ export function GlobalFinancialAnalysis() {
                                     <span>Sin beneficios:</span>
                                     <span>{investmentData.indicadores_reales?.payback_sin_beneficios || 0} años</span>
                                 </div>
+                                <p className="text-[9px] text-orange-400 mt-1 italic">Basado en operación real histórica</p>
                             </div>
 
-                            {/* PROYECTADO */}
+                            {/* IDEAL */}
                             <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs font-medium text-blue-700">PROYECTADO</span>
+                                    <span className="text-xs font-medium text-blue-700">IDEAL</span>
                                     <span className="text-lg font-bold text-blue-600">
                                         {investmentData.indicadores_proyectados?.payback_con_beneficios || 0} años
                                     </span>
@@ -472,6 +474,7 @@ export function GlobalFinancialAnalysis() {
                                     <span>Sin beneficios:</span>
                                     <span>{investmentData.indicadores_proyectados?.payback_sin_beneficios || 0} años</span>
                                 </div>
+                                <p className="text-[9px] text-blue-400 mt-1 italic">Si hubiera operado al 100% desde inicio</p>
                             </div>
                         </div>
                     ) : (
