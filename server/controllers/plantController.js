@@ -72,12 +72,12 @@ export const getPlantsSummary = async (req, res) => {
                     COALESCE(SUM(m.imported_energy_kwh), 0) AS import_kwh_mes
                 FROM specs s
                 CROSS JOIN params pr
-                LEFT JOIN fs.plant_daily_metrics m
+                LEFT JOIN fs.plant_daily_metrics_combined m
                     ON m.plant_code = s.plant_code
                     AND m.date >= pr.d_ini_mes AND m.date <= pr.d_hoy
                 GROUP BY s.plant_code
             ),
-            -- Métricas del AÑO (YTD) desde fs.plant_daily_metrics (histórico completo)
+            -- Métricas del AÑO (YTD) desde fs.plant_daily_metrics_combined (histórico completo)
             gen_ytd AS (
                 SELECT
                     s.plant_code,
@@ -88,12 +88,12 @@ export const getPlantsSummary = async (req, res) => {
                     COALESCE(SUM(m.imported_energy_kwh), 0) AS import_kwh_ytd
                 FROM specs s
                 CROSS JOIN params pr
-                LEFT JOIN fs.plant_daily_metrics m
+                LEFT JOIN fs.plant_daily_metrics_combined m
                     ON m.plant_code = s.plant_code
                     AND m.date >= pr.d_ini_year AND m.date <= pr.d_hoy
                 GROUP BY s.plant_code
             ),
-            -- Total histórico desde fs.plant_daily_metrics (histórico completo)
+            -- Total histórico desde fs.plant_daily_metrics_combined (histórico completo)
             gen_total AS (
                 SELECT
                     plant_code,
@@ -101,7 +101,7 @@ export const getPlantsSummary = async (req, res) => {
                     SUM(fv_yield_kwh) as gen_total,
                     SUM(self_consumption_kwh) as autoconsumo_total,
                     SUM(exported_energy_kwh) as export_total
-                FROM fs.plant_daily_metrics
+                FROM fs.plant_daily_metrics_combined
                 GROUP BY plant_code
             ),
             -- Estado en tiempo real (solo generación - consumo/export/import viene de snapshot)
@@ -232,7 +232,7 @@ export const getPlantDetails = async (req, res) => {
                 WHERE plant_code = $1
                 AND DATE(ts_utc AT TIME ZONE 'America/Bogota') = ultimo_dia.max_date
             ),
-            -- MES desde fs.plant_daily_metrics (histórico)
+            -- MES desde fs.plant_daily_metrics_combined (histórico)
             mtd AS (
                 SELECT
                     SUM(fv_yield_kwh) as gen_mes,
@@ -240,10 +240,10 @@ export const getPlantDetails = async (req, res) => {
                     SUM(self_consumption_kwh) as autoconsumo_mes,
                     SUM(exported_energy_kwh) as export_mes,
                     SUM(imported_energy_kwh) as import_mes
-                FROM fs.plant_daily_metrics, params
+                FROM fs.plant_daily_metrics_combined, params
                 WHERE plant_code = $1 AND date >= d_ini_mes AND date <= d_hoy
             ),
-            -- AÑO desde fs.plant_daily_metrics (histórico)
+            -- AÑO desde fs.plant_daily_metrics_combined (histórico)
             ytd AS (
                 SELECT
                     SUM(fv_yield_kwh) as gen_ytd,
@@ -251,17 +251,17 @@ export const getPlantDetails = async (req, res) => {
                     SUM(self_consumption_kwh) as autoconsumo_ytd,
                     SUM(exported_energy_kwh) as export_ytd,
                     SUM(imported_energy_kwh) as import_ytd
-                FROM fs.plant_daily_metrics, params
+                FROM fs.plant_daily_metrics_combined, params
                 WHERE plant_code = $1 AND date >= d_ini_year AND date <= d_hoy
             ),
-            -- TOTAL desde fs.plant_daily_metrics (histórico completo)
+            -- TOTAL desde fs.plant_daily_metrics_combined (histórico completo)
             total AS (
                 SELECT
                     SUM(fv_yield_kwh) as gen_total,
                     SUM(self_consumption_kwh) as autoconsumo_total,
                     SUM(exported_energy_kwh) as export_total,
                     MIN(date) as start_date
-                FROM fs.plant_daily_metrics
+                FROM fs.plant_daily_metrics_combined
                 WHERE plant_code = $1
             ),
             realtime AS (
@@ -348,7 +348,7 @@ export const getPlantDetails = async (req, res) => {
         const ingresoExportacion = exportTotal * TARIFA_EXPORTACION;
         const savingsTotal = ahorroAutoconsumo + ingresoExportacion;
 
-        // Historial Mensual para Gráficas (desde fs.plant_daily_metrics)
+        // Historial Mensual para Gráficas (desde fs.plant_daily_metrics_combined)
         const historyRes = await dbQuery(`
             SELECT
                 EXTRACT(YEAR FROM date) as year,
@@ -357,7 +357,7 @@ export const getPlantDetails = async (req, res) => {
                 SUM(self_consumption_kwh) as autoconsumo,
                 SUM(exported_energy_kwh) as exportacion,
                 SUM(imported_energy_kwh) as importacion
-            FROM fs.plant_daily_metrics
+            FROM fs.plant_daily_metrics_combined
             WHERE plant_code = $1
             GROUP BY 1, 2
         `, [id]);
@@ -478,7 +478,7 @@ export const getInvestmentSummary = async (req, res) => {
                     EXTRACT(YEAR FROM date) as anio,
                     EXTRACT(MONTH FROM date) as mes_num,
                     SUM(self_consumption_kwh) as autoconsumo_kwh
-                FROM fs.plant_daily_metrics
+                FROM fs.plant_daily_metrics_combined
                 GROUP BY EXTRACT(YEAR FROM date), EXTRACT(MONTH FROM date)
             ),
             tarifa_mensual AS (
@@ -594,7 +594,7 @@ export const getInvestmentSummary = async (req, res) => {
         const saldoNeto = inversionNetaConBeneficios - ingresosOperativos;
 
         // Meses de operación real (desde histórico completo)
-        const mesesQuery = `SELECT count(DISTINCT to_char(date, 'YYYY-MM')) as meses FROM fs.plant_daily_metrics`;
+        const mesesQuery = `SELECT count(DISTINCT to_char(date, 'YYYY-MM')) as meses FROM fs.plant_daily_metrics_combined`;
         const mesesRes = await dbQuery(mesesQuery);
         const mesesOperacion = parseInt(mesesRes.rows[0].meses || 30);
 
@@ -662,7 +662,7 @@ export const getInvestmentSummary = async (req, res) => {
             autoconsumo_anio AS (
                 SELECT
                     COALESCE(SUM(self_consumption_kwh), 0) as kwh_anio
-                FROM fs.plant_daily_metrics
+                FROM fs.plant_daily_metrics_combined
                 WHERE EXTRACT(YEAR FROM date) = $1
             )
             SELECT
@@ -799,7 +799,7 @@ export const getFinancialHistory = async (req, res) => {
                 EXTRACT(YEAR FROM m.date)::INTEGER as year,
                 EXTRACT(MONTH FROM m.date)::INTEGER as month_num,
                 SUM(COALESCE(m.self_consumption_kwh, 0)) as autoconsumo_kwh
-            FROM fs.plant_daily_metrics m
+            FROM fs.plant_daily_metrics_combined m
             JOIN dim.fs_plants fp ON m.plant_code = fp.plant_code
             WHERE EXTRACT(YEAR FROM m.date) >= 2023
             GROUP BY fp.plant_name, EXTRACT(YEAR FROM m.date), EXTRACT(MONTH FROM m.date)
@@ -883,7 +883,7 @@ export const getFinancialHistory = async (req, res) => {
                     EXTRACT(YEAR FROM date) as year,
                     EXTRACT(MONTH FROM date) as month,
                     SUM(fv_yield_kwh) as total_generation
-                FROM fs.plant_daily_metrics
+                FROM fs.plant_daily_metrics_combined
                 GROUP BY 1, 2
                 ORDER BY 1 ASC, 2 ASC
             `;
@@ -899,13 +899,13 @@ export const getFinancialHistory = async (req, res) => {
 // Fuente: fs.plant_daily_metrics (histórico completo)
 export const getGenerationHistory = async (req, res) => {
     try {
-        // Histórico completo desde plant_daily_metrics
+        // Histórico completo desde plant_daily_metrics_combined
         const query = `
             SELECT
                 EXTRACT(YEAR FROM date)::int as year,
                 EXTRACT(MONTH FROM date)::int as month,
                 SUM(fv_yield_kwh) as generation
-            FROM fs.plant_daily_metrics
+            FROM fs.plant_daily_metrics_combined
             GROUP BY 1, 2
             ORDER BY 1, 2
         `;
@@ -982,7 +982,7 @@ export const getEnergyDistribution = async (req, res) => {
                 SUM(self_consumption_kwh) as autoconsumo_kwh,
                 SUM(exported_energy_kwh) as exportacion_kwh,
                 SUM(fv_yield_kwh) as generacion_total_kwh
-            FROM fs.plant_daily_metrics
+            FROM fs.plant_daily_metrics_combined
             GROUP BY 1, 2
             ORDER BY 1, 2
         `;
