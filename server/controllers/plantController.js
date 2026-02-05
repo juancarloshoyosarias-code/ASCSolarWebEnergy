@@ -1235,8 +1235,20 @@ export const getDiferenciasOR = async (req, res) => {
                     END as mes,
                     MIN(m.date) as fecha_inicial,
                     MAX(m.date) as fecha_final,
-                    SUM(COALESCE(m.imported_energy_kwh, 0)) as import_fusion_kwh
-                FROM fs.plant_daily_metrics m
+                    -- Total de importación (incluye datos reales + rellenados)
+                    SUM(COALESCE(m.imported_energy_kwh, 0)) as import_fusion_kwh,
+                    -- SOLO importación de datos REALES de FusionSolar (para comparación justa)
+                    SUM(CASE WHEN m.data_source = 'fusionsolar' THEN COALESCE(m.imported_energy_kwh, 0) ELSE 0 END) as import_fusion_real_kwh,
+                    -- Detectar fuente predominante del mes
+                    CASE
+                        WHEN COUNT(CASE WHEN m.data_source = 'fusionsolar' AND m.imported_energy_kwh > 0 THEN 1 END) > 0
+                        THEN 'fusionsolar'
+                        ELSE 'celsia'
+                    END as data_source,
+                    -- Contar días por fuente
+                    COUNT(CASE WHEN m.data_source = 'fusionsolar' THEN 1 END) as dias_fusionsolar,
+                    COUNT(CASE WHEN m.data_source = 'celsia' THEN 1 END) as dias_celsia
+                FROM fs.plant_daily_metrics_combined m
                 JOIN dim.fs_plants fp ON fp.plant_code = m.plant_code
                 WHERE m.date >= '2023-01-01'
                 GROUP BY fp.plant_name, EXTRACT(YEAR FROM m.date), EXTRACT(MONTH FROM m.date)
@@ -1250,17 +1262,29 @@ export const getDiferenciasOR = async (req, res) => {
                     c.fecha_inicial,
                     c.fecha_final,
                     c.import_celsia_kwh,
+                    -- Mostrar el total de FusionSolar (incluye rellenados para que los totales cuadren)
                     COALESCE(f.import_fusion_kwh, 0) as import_fusion_kwh,
                     c.tarifa_kwh,
                     c.import_celsia_cop,
-                    -- Desfase: Celsia - FusionSolar
-                    -- Positivo = Celsia cobra MÁS de lo que FusionSolar registra
-                    -- Negativo = Celsia cobra MENOS
-                    (c.import_celsia_kwh - COALESCE(f.import_fusion_kwh, 0)) as desfase_kwh,
-                    ROUND(((c.import_celsia_kwh - COALESCE(f.import_fusion_kwh, 0)) * c.tarifa_kwh)::numeric, 0) as desfase_cop,
+                    -- Fuente de datos
+                    COALESCE(f.data_source, 'sin_datos') as data_source,
+                    COALESCE(f.dias_fusionsolar, 0) as dias_fusionsolar,
+                    COALESCE(f.dias_celsia, 0) as dias_celsia,
+                    -- Desfase: SOLO calcular cuando hay datos REALES de FusionSolar
+                    -- Si data_source = 'celsia' (todo rellenado), el desfase es 0 (son los mismos datos)
                     CASE
-                        WHEN COALESCE(f.import_fusion_kwh, 0) > 0
-                        THEN ROUND(((c.import_celsia_kwh - f.import_fusion_kwh) / f.import_fusion_kwh * 100)::numeric, 1)
+                        WHEN COALESCE(f.data_source, 'sin_datos') = 'fusionsolar'
+                        THEN (c.import_celsia_kwh - COALESCE(f.import_fusion_real_kwh, 0))
+                        ELSE 0
+                    END as desfase_kwh,
+                    CASE
+                        WHEN COALESCE(f.data_source, 'sin_datos') = 'fusionsolar'
+                        THEN ROUND(((c.import_celsia_kwh - COALESCE(f.import_fusion_real_kwh, 0)) * c.tarifa_kwh)::numeric, 0)
+                        ELSE 0
+                    END as desfase_cop,
+                    CASE
+                        WHEN COALESCE(f.data_source, 'sin_datos') = 'fusionsolar' AND COALESCE(f.import_fusion_real_kwh, 0) > 0
+                        THEN ROUND(((c.import_celsia_kwh - f.import_fusion_real_kwh) / f.import_fusion_real_kwh * 100)::numeric, 1)
                         ELSE 0
                     END as desfase_pct
                 FROM celsia_data c
