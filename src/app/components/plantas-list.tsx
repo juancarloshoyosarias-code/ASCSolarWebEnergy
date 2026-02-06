@@ -338,137 +338,113 @@ export function PlantasList() {
                 </span>
               </div>
 
-              {/* Contenido Principal - Dos Columnas */}
-              <div className="grid grid-cols-2 gap-4">
-                {/* Columna Izquierda: Producción y Consumo con Donut Charts */}
-                <div className="space-y-4">
-                  {/* PRODUCCIÓN HOY - Verde (autoconsumo) + Naranja (exportación) */}
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Producción</p>
-                    <div className="flex items-start gap-3">
+              {/* Contenido Principal - Stack en móvil, 2 cols en desktop */}
+              <div className="flex flex-col md:grid md:grid-cols-2 gap-3 md:gap-4">
+                {/* Producción y Consumo - Horizontal en móvil */}
+                <div className="grid grid-cols-2 md:flex md:flex-col gap-3 md:gap-4">
+                  {/* PRODUCCIÓN HOY */}
+                  <div className="bg-muted/20 rounded-lg p-2 md:p-0 md:bg-transparent">
+                    <p className="text-[10px] md:text-xs font-semibold text-muted-foreground mb-1 md:mb-2 uppercase tracking-wide">Producción</p>
+                    <div className="flex flex-col md:flex-row items-center md:items-start gap-1 md:gap-3">
                       <DualDonutChart
                         value1={autoconsumoToday}
                         value2={exportToday}
                         color1={COLORS.autoconsumo}
                         color2={COLORS.exportacion}
-                        size={70}
-                        strokeWidth={7}
+                        size={50}
+                        strokeWidth={5}
                         centerValue={genToday}
                         unit="kWh"
                       />
-                      <div className="flex-1 space-y-1.5 text-xs pt-1">
-                        {/* Autoconsumo */}
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.autoconsumo }}></div>
-                          <span className="text-muted-foreground">Auto:</span>
-                          <span className="font-semibold text-foreground ml-auto">{autoconsumoToday.toFixed(0)}</span>
-                          <span style={{ color: COLORS.autoconsumo }} className="font-bold">({pctAutoconsumoProduccion}%)</span>
+                      <div className="flex-1 space-y-0.5 md:space-y-1.5 text-[10px] md:text-xs md:pt-1 w-full">
+                        <div className="flex items-center justify-between md:justify-start gap-1 md:gap-2">
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full" style={{ backgroundColor: COLORS.autoconsumo }}></div>
+                            <span className="text-muted-foreground">Auto:</span>
+                          </div>
+                          <span className="font-semibold" style={{ color: COLORS.autoconsumo }}>{pctAutoconsumoProduccion}%</span>
                         </div>
-                        {/* Exportación */}
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.exportacion }}></div>
-                          <span className="text-muted-foreground">Exp:</span>
-                          <span className="font-semibold text-foreground ml-auto">{exportToday.toFixed(0)}</span>
-                          <span style={{ color: COLORS.exportacion }} className="font-bold">({pctExportacion}%)</span>
+                        <div className="flex items-center justify-between md:justify-start gap-1 md:gap-2">
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full" style={{ backgroundColor: COLORS.exportacion }}></div>
+                            <span className="text-muted-foreground">Exp:</span>
+                          </div>
+                          <span className="font-semibold" style={{ color: COLORS.exportacion }}>{pctExportacion}%</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* CONSUMO HOY - Verde (de FV) + Naranja (de la red) */}
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Consumo</p>
-                    <div className="flex items-start gap-3">
+                  {/* CONSUMO HOY */}
+                  <div className="bg-muted/20 rounded-lg p-2 md:p-0 md:bg-transparent">
+                    <p className="text-[10px] md:text-xs font-semibold text-muted-foreground mb-1 md:mb-2 uppercase tracking-wide">Consumo</p>
+                    <div className="flex flex-col md:flex-row items-center md:items-start gap-1 md:gap-3">
                       <DualDonutChart
                         value1={autoconsumoToday}
                         value2={importToday}
                         color1={COLORS.autoconsumoConsumo}
                         color2={COLORS.importacion}
-                        size={70}
-                        strokeWidth={7}
+                        size={50}
+                        strokeWidth={5}
                         centerValue={consumoToday}
                         unit="kWh"
                       />
-                      <div className="flex-1 space-y-1.5 text-xs pt-1">
-                        {/* Autoconsumo (De energía FV) */}
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.autoconsumoConsumo }}></div>
-                          <span className="text-muted-foreground">Auto:</span>
-                          <span className="font-semibold text-foreground ml-auto">{autoconsumoToday.toFixed(0)}</span>
-                          <span style={{ color: COLORS.autoconsumoConsumo }} className="font-bold">({pctAutoconsumoConsumo}%)</span>
+                      <div className="flex-1 space-y-0.5 md:space-y-1.5 text-[10px] md:text-xs md:pt-1 w-full">
+                        <div className="flex items-center justify-between md:justify-start gap-1 md:gap-2">
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full" style={{ backgroundColor: COLORS.autoconsumoConsumo }}></div>
+                            <span className="text-muted-foreground">Auto:</span>
+                          </div>
+                          <span className="font-semibold" style={{ color: COLORS.autoconsumoConsumo }}>{pctAutoconsumoConsumo}%</span>
                         </div>
-                        {/* Importación (De la red) */}
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.importacion }}></div>
-                          <span className="text-muted-foreground">Imp:</span>
-                          <span className="font-semibold text-foreground ml-auto">{importToday.toFixed(0)}</span>
-                          <span style={{ color: COLORS.importacion }} className="font-bold">({pctImportacion}%)</span>
+                        <div className="flex items-center justify-between md:justify-start gap-1 md:gap-2">
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full" style={{ backgroundColor: COLORS.importacion }}></div>
+                            <span className="text-muted-foreground">Imp:</span>
+                          </div>
+                          <span className="font-semibold" style={{ color: COLORS.importacion }}>{pctImportacion}%</span>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Columna Derecha: Objetivos y Cumplimiento */}
-                <div className="bg-muted/30 rounded-xl p-3 space-y-3 text-xs">
+                {/* Objetivos y Cumplimiento - Horizontal en móvil */}
+                <div className="bg-muted/30 rounded-xl p-2 md:p-3 grid grid-cols-3 md:flex md:flex-col gap-2 md:gap-3 text-[10px] md:text-xs">
                   {/* Objetivo Diario */}
-                  <div className="pb-2 border-b border-border">
-                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
-                      <Target className="w-3 h-3" />
+                  <div className="md:pb-2 md:border-b border-border text-center md:text-left">
+                    <div className="flex items-center justify-center md:justify-start gap-1 text-muted-foreground mb-0.5 md:mb-1">
+                      <Target className="w-2.5 h-2.5 md:w-3 md:h-3" />
                       <span className="font-medium">Día</span>
                     </div>
-                    <div className="space-y-0.5">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Objetivo:</span>
-                        <span className="font-semibold text-foreground">{targetDay.toFixed(0)} kWh</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Cumplimiento:</span>
-                        <span className={`font-bold ${parseFloat(complianceDay) >= 100 ? 'text-success' : parseFloat(complianceDay) >= 80 ? 'text-amber-500' : 'text-destructive'}`}>
-                          {complianceDay}%
-                        </span>
-                      </div>
-                    </div>
+                    <p className={`font-bold text-sm md:text-base ${parseFloat(complianceDay) >= 100 ? 'text-success' : parseFloat(complianceDay) >= 80 ? 'text-amber-500' : 'text-destructive'}`}>
+                      {complianceDay}%
+                    </p>
+                    <p className="text-muted-foreground hidden md:block">{targetDay.toFixed(0)} kWh obj</p>
                   </div>
 
                   {/* Objetivo Mensual */}
-                  <div className="pb-2 border-b border-border">
-                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
-                      <TrendingUp className="w-3 h-3" />
+                  <div className="md:pb-2 md:border-b border-border text-center md:text-left">
+                    <div className="flex items-center justify-center md:justify-start gap-1 text-muted-foreground mb-0.5 md:mb-1">
+                      <TrendingUp className="w-2.5 h-2.5 md:w-3 md:h-3" />
                       <span className="font-medium">Mes</span>
                     </div>
-                    <div className="space-y-0.5">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Acumulado:</span>
-                        <span className="font-semibold text-foreground">{(genMonth / 1000).toFixed(1)} MWh</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Cumplimiento:</span>
-                        <span className={`font-bold ${parseFloat(complianceMonth) >= 100 ? 'text-success' : parseFloat(complianceMonth) >= 80 ? 'text-amber-500' : 'text-destructive'}`}>
-                          {complianceMonth}%
-                        </span>
-                      </div>
-                    </div>
+                    <p className={`font-bold text-sm md:text-base ${parseFloat(complianceMonth) >= 100 ? 'text-success' : parseFloat(complianceMonth) >= 80 ? 'text-amber-500' : 'text-destructive'}`}>
+                      {complianceMonth}%
+                    </p>
+                    <p className="text-muted-foreground hidden md:block">{(genMonth / 1000).toFixed(1)} MWh</p>
                   </div>
 
                   {/* Objetivo Anual */}
-                  <div>
-                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
-                      <Calendar className="w-3 h-3" />
+                  <div className="text-center md:text-left">
+                    <div className="flex items-center justify-center md:justify-start gap-1 text-muted-foreground mb-0.5 md:mb-1">
+                      <Calendar className="w-2.5 h-2.5 md:w-3 md:h-3" />
                       <span className="font-medium">Año</span>
                     </div>
-                    <div className="space-y-0.5">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Acumulado:</span>
-                        <span className="font-semibold text-foreground">{(genYear / 1000).toFixed(1)} MWh</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Cumplimiento:</span>
-                        <span className={`font-bold ${parseFloat(complianceYear) >= 100 ? 'text-success' : parseFloat(complianceYear) >= 80 ? 'text-amber-500' : 'text-destructive'}`}>
-                          {complianceYear}%
-                        </span>
-                      </div>
-                    </div>
+                    <p className={`font-bold text-sm md:text-base ${parseFloat(complianceYear) >= 100 ? 'text-success' : parseFloat(complianceYear) >= 80 ? 'text-amber-500' : 'text-destructive'}`}>
+                      {complianceYear}%
+                    </p>
+                    <p className="text-muted-foreground hidden md:block">{(genYear / 1000).toFixed(1)} MWh</p>
                   </div>
                 </div>
               </div>

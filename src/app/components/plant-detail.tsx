@@ -524,49 +524,51 @@ export function PlantDetail() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-muted rounded-xl">
-        <button
-          onClick={() => setActiveTab('resumen')}
-          className={`flex items-center justify-center flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${activeTab === 'resumen' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-        >
-          <LayoutDashboard className="w-4 h-4 mr-2" />
-          Resumen
-        </button>
-        <button
-          onClick={() => setActiveTab('financiero')}
-          className={`flex items-center justify-center flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${activeTab === 'financiero' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-        >
-          <Calculator className="w-4 h-4 mr-2" />
-          Financiero
-        </button>
-        <button
-          onClick={() => setActiveTab('hsp')}
-          className={`flex items-center justify-center flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${activeTab === 'hsp' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-        >
-          <Sun className="w-4 h-4 mr-2" />
-          HSP
-        </button>
-        <button
-          onClick={() => setActiveTab('precios')}
-          className={`flex items-center justify-center flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${activeTab === 'precios' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-        >
-          <DollarSign className="w-4 h-4 mr-2" />
-          Precios
-        </button>
-        <button
-          onClick={() => setActiveTab('equipos')}
-          className={`flex items-center justify-center flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${activeTab === 'equipos' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-        >
-          <Server className="w-4 h-4 mr-2" />
-          Equipos
-        </button>
-        <button
-          onClick={() => setActiveTab('bitacora')}
-          className={`flex items-center justify-center flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${activeTab === 'bitacora' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-        >
-          <ClipboardList className="w-4 h-4 mr-2" />
-          Bitácora
-        </button>
+      <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+        <div className="flex gap-1 p-1 bg-muted rounded-xl min-w-max md:min-w-0">
+          <button
+            onClick={() => setActiveTab('resumen')}
+            className={`flex items-center justify-center py-2 px-3 md:py-2.5 md:px-4 md:flex-1 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'resumen' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <LayoutDashboard className="w-4 h-4 mr-1.5 md:mr-2" />
+            Resumen
+          </button>
+          <button
+            onClick={() => setActiveTab('financiero')}
+            className={`flex items-center justify-center py-2 px-3 md:py-2.5 md:px-4 md:flex-1 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'financiero' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <Calculator className="w-4 h-4 mr-1.5 md:mr-2" />
+            Financiero
+          </button>
+          <button
+            onClick={() => setActiveTab('hsp')}
+            className={`flex items-center justify-center py-2 px-3 md:py-2.5 md:px-4 md:flex-1 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'hsp' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <Sun className="w-4 h-4 mr-1.5 md:mr-2" />
+            HSP
+          </button>
+          <button
+            onClick={() => setActiveTab('precios')}
+            className={`flex items-center justify-center py-2 px-3 md:py-2.5 md:px-4 md:flex-1 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'precios' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <DollarSign className="w-4 h-4 mr-1.5 md:mr-2" />
+            Precios
+          </button>
+          <button
+            onClick={() => setActiveTab('equipos')}
+            className={`flex items-center justify-center py-2 px-3 md:py-2.5 md:px-4 md:flex-1 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'equipos' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <Server className="w-4 h-4 mr-1.5 md:mr-2" />
+            Equipos
+          </button>
+          <button
+            onClick={() => setActiveTab('bitacora')}
+            className={`flex items-center justify-center py-2 px-3 md:py-2.5 md:px-4 md:flex-1 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'bitacora' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <ClipboardList className="w-4 h-4 mr-1.5 md:mr-2" />
+            Bitácora
+          </button>
+        </div>
       </div>
 
       {/* TAB: RESUMEN */}
@@ -1255,45 +1257,45 @@ export function PlantDetail() {
             </div>
 
             {/* Tabla de Proyección Detallada */}
-            <div className="overflow-x-auto border border-border rounded-xl">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto border border-border rounded-xl -mx-4 md:mx-0">
+              <table className="w-full text-xs md:text-sm min-w-[600px]">
                 <thead>
-                  <tr className="bg-muted/50 text-muted-foreground text-xs uppercase text-left">
-                    <th className="p-4">Año</th>
-                    <th className="p-4">Renta Líquida Est.</th>
-                    <th className="p-4">Deducción Renta</th>
-                    <th className="p-4">Depreciación</th>
-                    <th className="p-4 text-right">Ahorro Cash Flow</th>
+                  <tr className="bg-muted/50 text-muted-foreground text-[10px] md:text-xs uppercase text-left">
+                    <th className="p-2 md:p-4">Año</th>
+                    <th className="p-2 md:p-4">Renta Líquida</th>
+                    <th className="p-2 md:p-4">Deducción</th>
+                    <th className="p-2 md:p-4">Depreciación</th>
+                    <th className="p-2 md:p-4 text-right">Ahorro</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {taxPlanning.map((row) => (
                     <tr key={row.year} className="hover:bg-muted/30 transition-colors">
-                      <td className="p-4 font-bold">{row.year}</td>
-                      <td className="p-4 text-muted-foreground">{formatCOP(row.rentaLiquidaEstimada)}</td>
-                      <td className="p-4">
-                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs font-semibold mr-2">
+                      <td className="p-2 md:p-4 font-bold">{row.year}</td>
+                      <td className="p-2 md:p-4 text-muted-foreground">{formatCOP(row.rentaLiquidaEstimada)}</td>
+                      <td className="p-2 md:p-4">
+                        <span className="hidden md:inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs font-semibold mr-2">
                           Renta
                         </span>
                         {formatCOP(row.deduccionTomada)}
                       </td>
-                      <td className="p-4">
-                        <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded text-xs font-semibold mr-2">
+                      <td className="p-2 md:p-4">
+                        <span className="hidden md:inline-block px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded text-xs font-semibold mr-2">
                           Depr.
                         </span>
                         {formatCOP(row.depreciacionTomada)}
                       </td>
-                      <td className="p-4 text-right font-bold text-success">
+                      <td className="p-2 md:p-4 text-right font-bold text-success">
                         +{formatCOP(row.ahorroImpuestosTotal)}
                       </td>
                     </tr>
                   ))}
                   <tr className="bg-muted/20 font-bold border-t-2 border-border">
-                    <td className="p-4">TOTAL</td>
-                    <td className="p-4">-</td>
-                    <td className="p-4 text-blue-600">{formatCOP(plant.deduccionRenta)}</td>
-                    <td className="p-4 text-amber-600">{formatCOP(plantInvestment)}</td>
-                    <td className="p-4 text-right text-success text-base">{formatCOP(beneficioTributarioTotal)}</td>
+                    <td className="p-2 md:p-4">TOTAL</td>
+                    <td className="p-2 md:p-4">-</td>
+                    <td className="p-2 md:p-4 text-blue-600">{formatCOP(plant.deduccionRenta)}</td>
+                    <td className="p-2 md:p-4 text-amber-600">{formatCOP(plantInvestment)}</td>
+                    <td className="p-2 md:p-4 text-right text-success text-sm md:text-base">{formatCOP(beneficioTributarioTotal)}</td>
                   </tr>
                 </tbody>
               </table>

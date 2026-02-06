@@ -223,50 +223,50 @@ export function Dashboard() {
         </div>
 
         {/* Columna Derecha: Payback (tarjeta grande con REAL y PROYECTADO) */}
-        <div className="bg-card rounded-xl border border-border p-6 flex flex-col justify-center">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-              <Clock className="w-6 h-6 text-purple-600" />
+        <div className="bg-card rounded-xl border border-border p-4 md:p-6 flex flex-col justify-center">
+          <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+              <Clock className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
             </div>
             <div>
-              <h3 className="font-bold text-foreground text-lg">Período de Retorno (Payback)</h3>
-              <p className="text-xs text-muted-foreground">Tiempo estimado para recuperar la inversión</p>
+              <h3 className="font-bold text-foreground text-sm md:text-lg">Período de Retorno</h3>
+              <p className="text-[10px] md:text-xs text-muted-foreground">Tiempo para recuperar inversión</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mt-2">
+          <div className="grid grid-cols-2 gap-2 md:gap-4 mt-1 md:mt-2">
             {/* REAL */}
-            <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                <span className="text-xs font-semibold text-amber-700 uppercase">Real (Operación)</span>
+            <div className="bg-amber-50 rounded-lg p-2 md:p-4 border border-amber-200">
+              <div className="flex items-center gap-1 md:gap-2 mb-1 md:mb-2">
+                <span className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-amber-500"></span>
+                <span className="text-[10px] md:text-xs font-semibold text-amber-700 uppercase">Real</span>
               </div>
-              <div className="space-y-1">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-sm text-muted-foreground">Con beneficios:</span>
-                  <span className="text-2xl font-bold text-amber-600">{paybackCon} <span className="text-sm font-normal">años</span></span>
+              <div className="space-y-0.5 md:space-y-1">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-baseline">
+                  <span className="text-[10px] md:text-sm text-muted-foreground">Con benef:</span>
+                  <span className="text-base md:text-2xl font-bold text-amber-600">{paybackCon} <span className="text-[10px] md:text-sm font-normal">años</span></span>
                 </div>
-                <div className="flex justify-between items-baseline">
-                  <span className="text-sm text-muted-foreground">Sin beneficios:</span>
-                  <span className="text-xl font-semibold text-amber-500">{paybackSin} <span className="text-sm font-normal">años</span></span>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-baseline">
+                  <span className="text-[10px] md:text-sm text-muted-foreground">Sin benef:</span>
+                  <span className="text-sm md:text-xl font-semibold text-amber-500">{paybackSin} <span className="text-[10px] md:text-sm font-normal">años</span></span>
                 </div>
               </div>
             </div>
 
             {/* PROYECTADO */}
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                <span className="text-xs font-semibold text-blue-700 uppercase">Proyectado</span>
+            <div className="bg-blue-50 rounded-lg p-2 md:p-4 border border-blue-200">
+              <div className="flex items-center gap-1 md:gap-2 mb-1 md:mb-2">
+                <span className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-blue-500"></span>
+                <span className="text-[10px] md:text-xs font-semibold text-blue-700 uppercase">Proyect.</span>
               </div>
-              <div className="space-y-1">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-sm text-muted-foreground">Con beneficios:</span>
-                  <span className="text-2xl font-bold text-blue-600">{investmentData?.indicadores_proyectados?.payback_con_beneficios || 0} <span className="text-sm font-normal">años</span></span>
+              <div className="space-y-0.5 md:space-y-1">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-baseline">
+                  <span className="text-[10px] md:text-sm text-muted-foreground">Con benef:</span>
+                  <span className="text-base md:text-2xl font-bold text-blue-600">{investmentData?.indicadores_proyectados?.payback_con_beneficios || 0} <span className="text-[10px] md:text-sm font-normal">años</span></span>
                 </div>
-                <div className="flex justify-between items-baseline">
-                  <span className="text-sm text-muted-foreground">Sin beneficios:</span>
-                  <span className="text-xl font-semibold text-blue-500">{investmentData?.indicadores_proyectados?.payback_sin_beneficios || 0} <span className="text-sm font-normal">años</span></span>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-baseline">
+                  <span className="text-[10px] md:text-sm text-muted-foreground">Sin benef:</span>
+                  <span className="text-sm md:text-xl font-semibold text-blue-500">{investmentData?.indicadores_proyectados?.payback_sin_beneficios || 0} <span className="text-[10px] md:text-sm font-normal">años</span></span>
                 </div>
               </div>
             </div>
@@ -317,14 +317,14 @@ export function Dashboard() {
         </div>
 
         {/* Distribución de Energía (Datos Reales) */}
-        <div className="bg-card rounded-2xl border border-border p-6">
-          <h3 className="font-bold text-foreground mb-2">Distribución de Energía (kWh)</h3>
-          <div className="flex gap-4 text-xs text-muted-foreground mb-4">
+        <div className="bg-card rounded-2xl border border-border p-3 md:p-6">
+          <h3 className="font-bold text-foreground mb-2 text-sm md:text-base">Distribución de Energía (kWh)</h3>
+          <div className="flex flex-wrap gap-2 md:gap-4 text-[10px] md:text-xs text-muted-foreground mb-4">
             {energyResumen.slice(-3).map((r: any) => (
               <span key={r.year} className="flex items-center gap-1">
                 <span className="font-bold text-foreground">{r.year}:</span>
-                <span className="text-emerald-500">{r.pctAutoconsumo}% Auto</span> /
-                <span className="text-amber-500">{r.pctExportacion}% Exp</span>
+                <span className="text-emerald-500">{r.pctAutoconsumo}%</span> /
+                <span className="text-amber-500">{r.pctExportacion}%</span>
               </span>
             ))}
           </div>
@@ -348,73 +348,112 @@ export function Dashboard() {
         </div >
       </div >
 
-      {/* Tabla Resumen de Plantas (REAL) */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden" >
-        <div className="p-6 border-b border-border flex justify-between items-center">
-          <h3 className="font-bold text-foreground">Resumen de Plantas ({plants.length})</h3>
+      {/* Resumen de Plantas (REAL) */}
+      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+        <div className="p-4 md:p-6 border-b border-border flex justify-between items-center">
+          <h3 className="font-bold text-foreground text-sm md:text-base">Resumen de Plantas ({plants.length})</h3>
           <button
             onClick={() => navigate('/plantas')}
-            className="text-sm text-primary hover:underline"
+            className="text-xs md:text-sm text-primary hover:underline"
           >
             Ver todas →
           </button>
         </div>
-        <div className="overflow-x-auto">
-          {loading ? (
-            <div className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
-              <Clock className="w-5 h-5 animate-spin" />
-              Cargando datos en tiempo real...
+
+        {loading ? (
+          <div className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
+            <Clock className="w-5 h-5 animate-spin" />
+            Cargando datos...
+          </div>
+        ) : (
+          <>
+            {/* Vista móvil: Tarjetas */}
+            <div className="md:hidden divide-y divide-border">
+              {plants.map((plant: any) => (
+                <div
+                  key={plant.id}
+                  onClick={() => navigate(`/planta/${plant.id}`)}
+                  className="p-4 hover:bg-muted/30 cursor-pointer transition-colors active:bg-muted/50"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-semibold text-foreground">{plant.name}</p>
+                      <p className="text-xs text-muted-foreground">{plant.location}</p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                      plant.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                      plant.status === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {plant.status === 'active' ? 'Online' : plant.status === 'warning' ? 'Revisar' : 'Offline'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <div className="flex gap-3">
+                      <span className="text-muted-foreground">{plant.capacity} kWp</span>
+                      <span className="text-muted-foreground">{formatNumber(plant.days_in_operation || 0)} días</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-emerald-600 font-semibold">{plant.pct_autoconsumo || 0}%</span>
+                      <span className="text-muted-foreground">/</span>
+                      <span className="text-amber-600 font-semibold">{plant.pct_exportacion || 0}%</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-muted/50 text-muted-foreground text-xs uppercase">
-                  <th className="p-4 text-left font-semibold">Planta</th>
-                  <th className="p-4 text-right font-semibold">Capacidad</th>
-                  <th className="p-4 text-center font-semibold">Fecha Inicio</th>
-                  <th className="p-4 text-right font-semibold">Días Operación</th>
-                  <th className="p-4 text-right font-semibold">% Autoconsumo</th>
-                  <th className="p-4 text-right font-semibold">% Exportación</th>
-                  <th className="p-4 text-center font-semibold">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {plants.map((plant: any) => {
-                  const startDate = plant.start_date ? new Date(plant.start_date).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-                  return (
-                    <tr
-                      key={plant.id}
-                      onClick={() => navigate(`/planta/${plant.id}`)}
-                      className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors"
-                    >
-                      <td className="p-4">
-                        <p className="font-semibold text-foreground">{plant.name}</p>
-                        <p className="text-xs text-muted-foreground">{plant.location}</p>
-                      </td>
-                      <td className="p-4 text-right font-medium">{plant.capacity} kWp</td>
-                      <td className="p-4 text-center text-muted-foreground">{startDate}</td>
-                      <td className="p-4 text-right font-medium">{formatNumber(plant.days_in_operation || 0)}</td>
-                      <td className="p-4 text-right">
-                        <span className="text-emerald-600 font-semibold">{plant.pct_autoconsumo || 0}%</span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <span className="text-amber-600 font-semibold">{plant.pct_exportacion || 0}%</span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${plant.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
-                          plant.status === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
-                          }`}>
-                          {plant.status === 'active' ? 'Online' : plant.status === 'warning' ? 'Revisar' : 'Offline'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div >
+
+            {/* Vista desktop: Tabla */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/50 text-muted-foreground text-xs uppercase">
+                    <th className="p-4 text-left font-semibold">Planta</th>
+                    <th className="p-4 text-right font-semibold">Capacidad</th>
+                    <th className="p-4 text-center font-semibold">Fecha Inicio</th>
+                    <th className="p-4 text-right font-semibold">Días Operación</th>
+                    <th className="p-4 text-right font-semibold">% Autoconsumo</th>
+                    <th className="p-4 text-right font-semibold">% Exportación</th>
+                    <th className="p-4 text-center font-semibold">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {plants.map((plant: any) => {
+                    const startDate = plant.start_date ? new Date(plant.start_date).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+                    return (
+                      <tr
+                        key={plant.id}
+                        onClick={() => navigate(`/planta/${plant.id}`)}
+                        className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors"
+                      >
+                        <td className="p-4">
+                          <p className="font-semibold text-foreground">{plant.name}</p>
+                          <p className="text-xs text-muted-foreground">{plant.location}</p>
+                        </td>
+                        <td className="p-4 text-right font-medium">{plant.capacity} kWp</td>
+                        <td className="p-4 text-center text-muted-foreground">{startDate}</td>
+                        <td className="p-4 text-right font-medium">{formatNumber(plant.days_in_operation || 0)}</td>
+                        <td className="p-4 text-right">
+                          <span className="text-emerald-600 font-semibold">{plant.pct_autoconsumo || 0}%</span>
+                        </td>
+                        <td className="p-4 text-right">
+                          <span className="text-amber-600 font-semibold">{plant.pct_exportacion || 0}%</span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${plant.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                            plant.status === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
+                            }`}>
+                            {plant.status === 'active' ? 'Online' : plant.status === 'warning' ? 'Revisar' : 'Offline'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
     </div >
   );
 }

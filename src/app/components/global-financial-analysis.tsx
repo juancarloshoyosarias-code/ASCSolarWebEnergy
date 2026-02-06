@@ -359,14 +359,14 @@ export function GlobalFinancialAnalysis() {
                 </div>
 
                 {/* 3. Progreso de Recuperación con Barra */}
-                <div className="bg-card border border-border p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-card border border-border p-4 md:p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
                     <p className="text-xs text-muted-foreground uppercase font-semibold mb-2">Recuperación de Inversión</p>
 
                     {investmentData?.recuperacion ? (
                         <div className="space-y-3">
                             {/* Barra de progreso */}
                             <div className="relative">
-                                <div className="flex justify-between text-xs mb-1">
+                                <div className="flex justify-between text-[10px] md:text-xs mb-1">
                                     <span className="font-semibold text-green-600">
                                         {investmentData.recuperacion.pct_recuperado.toFixed(1)}% Recuperado
                                     </span>
@@ -374,23 +374,31 @@ export function GlobalFinancialAnalysis() {
                                         Faltan {formatShortCOP(investmentData.recuperacion.saldo_pendiente)}
                                     </span>
                                 </div>
-                                <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                                <div className="w-full bg-gray-200 rounded-full h-3 md:h-4 overflow-hidden">
                                     <div
-                                        className="bg-gradient-to-r from-green-500 to-emerald-400 h-4 rounded-full transition-all duration-500"
+                                        className="bg-gradient-to-r from-green-500 to-emerald-400 h-3 md:h-4 rounded-full transition-all duration-500"
                                         style={{ width: `${Math.min(investmentData.recuperacion.pct_recuperado, 100)}%` }}
                                     />
                                 </div>
                             </div>
 
-                            {/* Desglose */}
-                            <div className="grid grid-cols-2 gap-2 text-[10px] border-t pt-2">
-                                <div>
-                                    <p className="text-muted-foreground">Recuperado</p>
-                                    <p className="font-bold text-green-600">{formatShortCOP(investmentData.recuperacion.total_recuperado)}</p>
+                            {/* Desglose del valor recuperado */}
+                            <div className="border-t pt-2 space-y-1">
+                                <div className="flex justify-between text-[10px]">
+                                    <span className="text-emerald-600">Ahorro Autoconsumo</span>
+                                    <span className="font-semibold">{formatShortCOP(investmentData.ingresos?.ahorro_autoconsumo || 0)}</span>
                                 </div>
-                                <div>
-                                    <p className="text-muted-foreground">Pendiente</p>
-                                    <p className="font-bold text-orange-500">{formatShortCOP(investmentData.recuperacion.saldo_pendiente)}</p>
+                                <div className="flex justify-between text-[10px]">
+                                    <span className="text-amber-600">Ingresos Excedentes</span>
+                                    <span className="font-semibold">{formatShortCOP(investmentData.ingresos?.cobros_celsia || 0)}</span>
+                                </div>
+                                <div className="flex justify-between text-[10px]">
+                                    <span className="text-blue-600">Beneficios Tributarios</span>
+                                    <span className="font-semibold">{formatShortCOP(investmentData.beneficios_tributarios?.total || 0)}</span>
+                                </div>
+                                <div className="flex justify-between text-xs font-bold border-t pt-1 mt-1">
+                                    <span className="text-green-600">= Total Recuperado</span>
+                                    <span className="text-green-600">{formatShortCOP(investmentData.recuperacion.total_recuperado)}</span>
                                 </div>
                             </div>
                         </div>
@@ -399,24 +407,94 @@ export function GlobalFinancialAnalysis() {
                     )}
                 </div>
 
-                {/* 4. Fecha Estimada Payback */}
-                <div className="bg-card border border-border p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                    <p className="text-xs text-muted-foreground uppercase font-semibold mb-2">Fecha Estimada Payback</p>
+                {/* 4. Fecha Estimada Payback - 4 Escenarios */}
+                <div className="bg-card border border-border p-4 md:p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                    <p className="text-xs text-muted-foreground uppercase font-semibold mb-3">Fechas Estimadas Payback</p>
 
-                    {investmentData?.recuperacion ? (
-                        <div className="space-y-2">
-                            <h3 className="text-2xl font-bold text-blue-600">
-                                {new Date(investmentData.recuperacion.fecha_payback_estimada + '-01').toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
-                            </h3>
-                            <div className="text-xs text-muted-foreground">
-                                <p>~{investmentData.recuperacion.meses_restantes} meses restantes</p>
-                                <p className="mt-1 text-[10px]">
-                                    Basado en promedio mensual: {formatShortCOP(investmentData.indicadores_reales?.ahorro_mensual_promedio || 0)}
+                    {investmentData ? (() => {
+                        // Meses de operación ya transcurridos
+                        const mesesOperacion = investmentData.saldos?.meses_operacion || 0;
+
+                        // Fecha de inicio de operación (hoy - meses operados)
+                        const fechaInicio = new Date();
+                        fechaInicio.setMonth(fechaInicio.getMonth() - mesesOperacion);
+
+                        // Calcular fecha de payback: fecha_inicio + años de payback
+                        const calcDate = (years: number) => {
+                            const date = new Date(fechaInicio);
+                            date.setMonth(date.getMonth() + Math.round(years * 12));
+                            return date.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' });
+                        };
+
+                        // Calcular meses restantes para cada escenario
+                        const calcMesesRestantes = (years: number) => {
+                            const mesesTotal = Math.round(years * 12);
+                            const restantes = mesesTotal - mesesOperacion;
+                            return Math.max(0, restantes);
+                        };
+
+                        const realCon = investmentData.indicadores_reales?.payback_con_beneficios || 0;
+                        const realSin = investmentData.indicadores_reales?.payback_sin_beneficios || 0;
+                        const proyCon = investmentData.indicadores_proyectados?.payback_con_beneficios || 0;
+                        const proySin = investmentData.indicadores_proyectados?.payback_sin_beneficios || 0;
+
+                        return (
+                            <div className="space-y-4">
+                                {/* Info de contexto */}
+                                <p className="text-[10px] text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                                    Operando desde hace {mesesOperacion} meses
                                 </p>
-                                <p className="mt-1 text-[9px] italic text-blue-500">Si continúa al ritmo actual</p>
+                                {/* Real */}
+                                <div>
+                                    <p className="text-xs text-amber-600 font-semibold uppercase mb-2">Real (Datos Históricos)</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl">
+                                            <p className="text-xs text-muted-foreground mb-1">Con Beneficios</p>
+                                            <p className="text-base md:text-lg font-bold text-green-600">{calcDate(realCon)}</p>
+                                            <p className="text-[10px] text-green-600/70">
+                                                {calcMesesRestantes(realCon) > 0
+                                                    ? `Faltan ${calcMesesRestantes(realCon)} meses`
+                                                    : '¡Completado!'}
+                                            </p>
+                                        </div>
+                                        <div className="bg-slate-100 dark:bg-slate-900/20 p-3 rounded-xl">
+                                            <p className="text-xs text-muted-foreground mb-1">Sin Beneficios</p>
+                                            <p className="text-base md:text-lg font-bold text-slate-600">{calcDate(realSin)}</p>
+                                            <p className="text-[10px] text-slate-500">
+                                                {calcMesesRestantes(realSin) > 0
+                                                    ? `Faltan ${calcMesesRestantes(realSin)} meses`
+                                                    : '¡Completado!'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Teórico */}
+                                <div>
+                                    <p className="text-xs text-blue-600 font-semibold uppercase mb-2">Teórico (Proyectado)</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl">
+                                            <p className="text-xs text-muted-foreground mb-1">Con Beneficios</p>
+                                            <p className="text-base md:text-lg font-bold text-blue-600">{calcDate(proyCon)}</p>
+                                            <p className="text-[10px] text-blue-600/70">
+                                                {calcMesesRestantes(proyCon) > 0
+                                                    ? `Faltan ${calcMesesRestantes(proyCon)} meses`
+                                                    : '¡Completado!'}
+                                            </p>
+                                        </div>
+                                        <div className="bg-slate-100 dark:bg-slate-900/20 p-3 rounded-xl">
+                                            <p className="text-xs text-muted-foreground mb-1">Sin Beneficios</p>
+                                            <p className="text-base md:text-lg font-bold text-slate-500">{calcDate(proySin)}</p>
+                                            <p className="text-[10px] text-slate-500">
+                                                {calcMesesRestantes(proySin) > 0
+                                                    ? `Faltan ${calcMesesRestantes(proySin)} meses`
+                                                    : '¡Completado!'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    ) : (
+                        );
+                    })() : (
                         <h3 className="text-2xl font-bold text-foreground">Calculando...</h3>
                     )}
                 </div>
@@ -684,26 +762,26 @@ export function GlobalFinancialAnalysis() {
                     </div>
 
                     {/* Resumen de Impacto */}
-                    <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t border-border">
-                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
-                            <p className="text-xs uppercase text-slate-500 font-semibold mb-1">Facturación Teórica (Sin Solar)</p>
-                            <p className="text-xl font-bold text-slate-400 line-through decoration-rose-500/50">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mt-6 pt-4 border-t border-border">
+                        <div className="p-3 md:p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                            <p className="text-[10px] md:text-xs uppercase text-slate-500 font-semibold mb-1">Facturación Teórica (Sin Solar)</p>
+                            <p className="text-lg md:text-xl font-bold text-slate-400 line-through decoration-rose-500/50">
                                 {formatShortCOP(plantIncome.reduce((s: number, p: any) => s + p.totalSinSolar, 0))}
                             </p>
                         </div>
-                        <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-center">
-                            <p className="text-xs uppercase text-blue-600 font-semibold mb-1">Facturación Real (Con Solar)</p>
-                            <p className="text-xl font-bold text-blue-700">
+                        <div className="p-3 md:p-4 bg-blue-50 rounded-xl border border-blue-100 text-center">
+                            <p className="text-[10px] md:text-xs uppercase text-blue-600 font-semibold mb-1">Facturación Real (Con Solar)</p>
+                            <p className="text-lg md:text-xl font-bold text-blue-700">
                                 {formatShortCOP(plantIncome.reduce((s: number, p: any) => s + p.total, 0))}
                             </p>
                         </div>
-                        <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
-                            <p className="text-xs uppercase text-emerald-600 font-semibold mb-1">Ahorro Neto Operativo</p>
+                        <div className="p-3 md:p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
+                            <p className="text-[10px] md:text-xs uppercase text-emerald-600 font-semibold mb-1">Ahorro Neto Operativo</p>
                             <div className="flex items-center justify-center gap-2">
-                                <p className="text-xl font-bold text-emerald-600">
+                                <p className="text-lg md:text-xl font-bold text-emerald-600">
                                     {formatShortCOP(plantIncome.reduce((s: number, p: any) => s + p.totalAhorro, 0))}
                                 </p>
-                                <span className="bg-emerald-200 text-emerald-800 text-xs px-2 py-1 rounded-full font-bold">
+                                <span className="bg-emerald-200 text-emerald-800 text-[10px] md:text-xs px-2 py-1 rounded-full font-bold">
                                     -{((1 - (plantIncome.reduce((s: number, p: any) => s + p.total, 0) /
                                         Math.max(plantIncome.reduce((s: number, p: any) => s + p.totalSinSolar, 0), 1))) * 100).toFixed(0)}%
                                 </span>
