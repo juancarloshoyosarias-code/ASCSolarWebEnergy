@@ -255,23 +255,23 @@ export function PlantasList() {
         </div>
       </div>
 
-      {/* Resumen Rápido */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-card rounded-xl border border-border p-4">
-          <p className="text-sm text-muted-foreground mb-1">Capacidad Total</p>
-          <p className="text-2xl font-bold text-foreground">{totalCapacity.toFixed(2)} kWp</p>
+      {/* Resumen Rápido - 2x2 en móvil, 4 columnas en desktop */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+        <div className="bg-card rounded-lg md:rounded-xl border border-border p-2 md:p-4">
+          <p className="text-[10px] md:text-sm text-muted-foreground mb-0.5 md:mb-1">Capacidad Total</p>
+          <p className="text-base md:text-2xl font-bold text-foreground">{totalCapacity.toFixed(1)} <span className="text-xs md:text-base font-normal">kWp</span></p>
         </div>
-        <div className="bg-card rounded-xl border border-border p-4">
-          <p className="text-sm text-muted-foreground mb-1">Generación Hoy</p>
-          <p className="text-2xl font-bold text-foreground">{totalGenToday.toLocaleString()} kWh</p>
+        <div className="bg-card rounded-lg md:rounded-xl border border-border p-2 md:p-4">
+          <p className="text-[10px] md:text-sm text-muted-foreground mb-0.5 md:mb-1">Generación Hoy</p>
+          <p className="text-base md:text-2xl font-bold text-foreground">{totalGenToday.toLocaleString()} <span className="text-xs md:text-base font-normal">kWh</span></p>
         </div>
-        <div className="bg-card rounded-xl border border-border p-4">
-          <p className="text-sm text-muted-foreground mb-1">Generación Mes</p>
-          <p className="text-2xl font-bold text-foreground">{(totalGenMonth / 1000).toFixed(1)} MWh</p>
+        <div className="bg-card rounded-lg md:rounded-xl border border-border p-2 md:p-4">
+          <p className="text-[10px] md:text-sm text-muted-foreground mb-0.5 md:mb-1">Generación Mes</p>
+          <p className="text-base md:text-2xl font-bold text-foreground">{(totalGenMonth / 1000).toFixed(1)} <span className="text-xs md:text-base font-normal">MWh</span></p>
         </div>
-        <div className="bg-card rounded-xl border border-border p-4">
-          <p className="text-sm text-muted-foreground mb-1">Generación Año</p>
-          <p className="text-2xl font-bold text-foreground">{(totalGenYear / 1000).toFixed(1)} MWh</p>
+        <div className="bg-card rounded-lg md:rounded-xl border border-border p-2 md:p-4">
+          <p className="text-[10px] md:text-sm text-muted-foreground mb-0.5 md:mb-1">Generación Año</p>
+          <p className="text-base md:text-2xl font-bold text-foreground">{(totalGenYear / 1000).toFixed(1)} <span className="text-xs md:text-base font-normal">MWh</span></p>
         </div>
       </div>
 
